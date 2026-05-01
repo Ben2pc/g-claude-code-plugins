@@ -34,7 +34,7 @@ test("claude-code-agent skill keeps prompt references discoverable from SKILL.md
   assert.match(source, /`--worktree`/);
 });
 
-test("task prompt references cover diagnosis, narrow fix, worktree isolation, and follow-up reuse", () => {
+test("task prompt references cover diagnosis, narrow fix, worktree isolation, frontend, and follow-up reuse", () => {
   const source = read("references/task-prompt-recipes.md");
 
   assert.match(source, /^# Task Prompt Recipes$/m);
@@ -42,11 +42,18 @@ test("task prompt references cover diagnosis, narrow fix, worktree isolation, an
   assert.match(source, /^## Narrow Fix$/m);
   assert.match(source, /^## Planning Or Recon Pass$/m);
   assert.match(source, /^## Worktree-Isolated Implementation$/m);
+  assert.match(source, /^## Frontend Implementation$/m);
   assert.match(source, /^## Structured Output For A Parent Agent$/m);
   assert.match(source, /^## Follow-Up On The Same Claude Session$/m);
   assert.match(source, /<verification_loop>/);
   assert.match(source, /<missing_context_gating>/);
   assert.match(source, /<handoff_contract>/);
+  assert.match(source, /<solution_quality>/);
+  assert.match(source, /<design_thesis>/);
+  assert.match(source, /<first_viewport_rule>/);
+  assert.match(source, /propose 4 distinct visual directions/);
+  assert.match(source, /targeted unit tests for the changed behavior/);
+  assert.match(source, /each requirement traced to where it gets addressed/);
 });
 
 test("review and delegation references cover adversarial review and worker handoff contracts", () => {
@@ -59,6 +66,9 @@ test("review and delegation references cover adversarial review and worker hando
   assert.match(review, /^## Missing Tests Pass$/m);
   assert.match(review, /^## Contract Drift Review$/m);
   assert.match(review, /ship\/no-ship summary/);
+  assert.match(review, /<coverage_over_filtering>/);
+  assert.match(review, /coverage stage, not a filtering stage/);
+  assert.match(review, /severity and confidence labels per finding/);
 
   assert.match(delegation, /^# Delegation Prompt Recipes$/m);
   assert.match(delegation, /^## Independent Worker With Final Handoff$/m);

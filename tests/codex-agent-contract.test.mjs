@@ -29,18 +29,26 @@ test("codex-agent skill keeps prompt references discoverable from SKILL.md", () 
   assert.match(source, /--skip-git-repo-check - < \/tmp\/task-prompt\.txt/);
 });
 
-test("task prompt references cover diagnosis, narrow fix, and follow-up reuse", () => {
+test("task prompt references cover diagnosis, narrow fix, frontend, and follow-up reuse", () => {
   const source = read("references/task-prompt-recipes.md");
 
   assert.match(source, /^# Task Prompt Recipes$/m);
   assert.match(source, /^## Diagnosis$/m);
   assert.match(source, /^## Narrow Fix$/m);
   assert.match(source, /^## Planning Or Design Pass$/m);
+  assert.match(source, /^## Frontend Implementation$/m);
   assert.match(source, /^## Structured Output To Feed Another Tool$/m);
   assert.match(source, /^## Prompt-Patching$/m);
   assert.match(source, /^## Follow-Up On The Same Codex Thread$/m);
   assert.match(source, /<verification_loop>/);
   assert.match(source, /<missing_context_gating>/);
+  assert.match(source, /<solution_quality>/);
+  assert.match(source, /<design_thesis>/);
+  assert.match(source, /<first_viewport_rule>/);
+  assert.match(source, /low or medium reasoning/);
+  assert.match(source, /Playwright MCP server or skill/);
+  assert.match(source, /targeted unit tests for the changed behavior/);
+  assert.match(source, /each requirement traced to where it gets addressed/);
 });
 
 test("review and browser references cover adversarial review and computer-use research", () => {
@@ -53,12 +61,17 @@ test("review and browser references cover adversarial review and computer-use re
   assert.match(review, /^## Missing Tests Pass$/m);
   assert.match(review, /^## Contract Drift Review$/m);
   assert.match(review, /ship\/no-ship summary/);
+  assert.match(review, /<coverage_over_filtering>/);
+  assert.match(review, /coverage stage, not a filtering stage/);
+  assert.match(review, /severity and confidence labels per finding/);
 
   assert.match(browser, /^# Browser Research Prompt Recipes$/m);
   assert.match(browser, /^## Community Signal Sampling$/m);
   assert.match(browser, /^## Product Workflow Observation$/m);
   assert.match(browser, /^## Evidence-First Chinese Summary$/m);
+  assert.match(browser, /^## Retrieval Budget$/m);
   assert.match(browser, /^## Safety Tail$/m);
   assert.match(browser, /Use Computer Use on my Mac/);
   assert.match(browser, /Do not modify local files/);
+  assert.match(browser, /Treat each search or page open as a budgeted action/);
 });
