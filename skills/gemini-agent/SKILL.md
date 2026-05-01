@@ -75,16 +75,6 @@ gemini -p "你的任务描述" --output-format stream-json --model pro
 - `error` 是 non-fatal 的 warning；真正的失败用退出码判断
 - 需要调试更多内部细节时再追加 `--debug`
 
-### 继续最近会话
-
-```bash
-gemini -p "后续提问" -r latest --output-format json --model flash
-```
-
-- 自动化调用把 prompt 放 `-p`；**不要**用 `gemini -r latest "prompt"` 这种纯位置参数形式——TTY 环境下位置参数默认进交互模式（`gemini --help`: `query ... Runs in interactive mode by default; use -p/--prompt for non-interactive.`），脚本会挂住等输入
-- `-r, --resume` 接 `latest`、session 索引号（见下面的 `--list-sessions`）或完整 session ID
-- 只提供 `-r latest` 而不带 `-p`，进入最近一次会话的交互模式
-
 ### 继续指定会话
 
 ```bash
@@ -94,6 +84,16 @@ gemini -p "后续提问" --resume 5 --output-format json --model flash
 
 - 脚本里需要确定绑定某次会话时，保存并复用 session ID 或索引号，比 `latest` 更稳
 - 当前目录下不同任务的 session 互不干扰
+
+### 继续最近会话（快捷方式）
+
+```bash
+gemini -p "后续提问" -r latest --output-format json --model flash
+```
+
+- 自动化调用把 prompt 放 `-p`；**不要**用 `gemini -r latest "prompt"` 这种纯位置参数形式——TTY 环境下位置参数默认进交互模式（`gemini --help`: `query ... Runs in interactive mode by default; use -p/--prompt for non-interactive.`），脚本会挂住等输入
+- `-r, --resume` 接 `latest`、session 索引号（见下面的 `--list-sessions`）或完整 session ID
+- 只提供 `-r latest` 而不带 `-p`，进入最近一次会话的交互模式
 
 ### 列出 / 删除本地会话
 
