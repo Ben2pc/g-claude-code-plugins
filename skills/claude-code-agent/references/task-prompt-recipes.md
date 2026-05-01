@@ -59,7 +59,11 @@ Finish the requested implementation instead of stopping after diagnosis.
 </completeness_contract>
 
 <verification_loop>
-Before finalizing, verify that the fix matches the task and that the changed code is coherent.
+Before finalizing, verify the fix matches the task and run the most relevant validation:
+- targeted unit tests for the changed behavior
+- type checks or lint when applicable
+- a minimal smoke test if full validation is too expensive
+If validation cannot run, say so and describe the next best check.
 </verification_loop>
 
 <solution_quality>
@@ -85,10 +89,11 @@ Do not implement yet.
 <structured_output_contract>
 Return:
 1. current-state findings
-2. proposed approach
-3. touched files or modules
-4. key risks
-5. verification plan
+2. proposed approach with each requirement traced to where it gets addressed
+3. named resources, files, modules, APIs, or systems involved
+4. state transitions or data flow when relevant
+5. validation commands or checks to run
+6. key risks and open questions that materially change the plan
 </structured_output_contract>
 
 <grounding_rules>
@@ -119,7 +124,12 @@ Do not perform unrelated cleanup.
 </scope_guardrails>
 
 <verification_loop>
-Before finalizing, run the most relevant checks that are available in the repository.
+Before finalizing, run the most relevant validation available in the repository:
+- targeted unit tests for the changed behavior
+- type checks or lint when applicable
+- build for affected packages
+- a minimal smoke test if full validation is too expensive
+If validation cannot run, explain why and describe the next best check.
 </verification_loop>
 ```
 

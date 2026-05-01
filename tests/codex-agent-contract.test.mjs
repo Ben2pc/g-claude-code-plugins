@@ -47,6 +47,8 @@ test("task prompt references cover diagnosis, narrow fix, frontend, and follow-u
   assert.match(source, /<first_viewport_rule>/);
   assert.match(source, /low or medium reasoning/);
   assert.match(source, /Playwright MCP server or skill/);
+  assert.match(source, /targeted unit tests for the changed behavior/);
+  assert.match(source, /each requirement traced to where it gets addressed/);
 });
 
 test("review and browser references cover adversarial review and computer-use research", () => {
@@ -67,7 +69,9 @@ test("review and browser references cover adversarial review and computer-use re
   assert.match(browser, /^## Community Signal Sampling$/m);
   assert.match(browser, /^## Product Workflow Observation$/m);
   assert.match(browser, /^## Evidence-First Chinese Summary$/m);
+  assert.match(browser, /^## Retrieval Budget$/m);
   assert.match(browser, /^## Safety Tail$/m);
   assert.match(browser, /Use Computer Use on my Mac/);
   assert.match(browser, /Do not modify local files/);
+  assert.match(browser, /Treat each search or page open as a budgeted action/);
 });

@@ -88,6 +88,8 @@ test("task prompt references cover diagnosis, narrow fix, worktree isolation, fr
   assert.match(source, /<design_thesis>/);
   assert.match(source, /<first_viewport_rule>/);
   assert.match(source, /gemini -r latest/);
+  assert.match(source, /targeted unit tests for the changed behavior/);
+  assert.match(source, /each requirement traced to where it gets addressed/);
 });
 
 test("review and delegation references cover adversarial review and worker handoff contracts", () => {
