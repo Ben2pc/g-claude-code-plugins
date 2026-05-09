@@ -41,7 +41,7 @@ This reviewer fires only when Detection signals match (new dispatch category: **
    - YAML frontmatter present with `name`, `description`, `model`
    - `name` kebab-case, 3–50 chars
    - `model` ∈ {`inherit`, `sonnet`, `opus`, `haiku`} (or version-suffixed variants)
-   - `description` includes worked `<example>` blocks for proactive triggering
+   - `description` includes worked `<example>` blocks for proactive triggering (Anthropic-recommended pattern; not strictly enforced — flag as suggestion when missing, not blocking)
    - System prompt body substantial (>20 chars after frontmatter)
 4. **Hooks** (`hooks/hooks.json`):
    - Valid JSON
@@ -62,7 +62,7 @@ This reviewer fires only when Detection signals match (new dispatch category: **
 
 ## When to invoke (detection-driven)
 
-This reviewer fires only when at least one Detection signal matches in the diff. The signals are **trigger conditions**, not focus hints — if nothing matches, the reviewer does not run.
+This reviewer fires only when at least one Detection signal matches in the diff. The signals are **trigger conditions**, not focus hints — if nothing matches, the reviewer does not run. (Note: this is the column header convention for detection-driven reviewers; required and tag-conditional reviewers use `Recommend focus on` because they always fire and the signals only refine attention.)
 
 | Recommend firing when | Detection |
 |---|---|
