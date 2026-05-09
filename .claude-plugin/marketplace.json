@@ -42,6 +42,17 @@
       },
       "category": "productivity",
       "tags": ["remote-control", "terminal", "session-manager"]
+    },
+    {
+      "name": "deep-review",
+      "source": "./plugins/deep-review",
+      "description": "Multi-dimensional PR review orchestrator. Dispatches parallel reviewers by dimension (correctness, test-quality, docs-sync, robustness, security, ux, performance, structure, code-quality, plugin-quality) and synthesizes findings into an actionable punch list.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Ben².pc"
+      },
+      "category": "development",
+      "tags": ["review", "code-review", "pr-review", "deep-review"]
     }
   ]
 }
