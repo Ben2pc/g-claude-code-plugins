@@ -6,7 +6,18 @@ The checklist below is a **starting point, not a fence**. It covers the most com
 
 This reviewer combines two upstream concerns: **skill quality** (description triggering, lean SKILL.md, progressive disclosure) and **plugin validation** (manifest schema, naming, security, versioning). It is dispatched by SKILL.md's detection-driven category — see SKILL.md for trigger conditions.
 
-**Universal-standards principle**: production skills and plugins should work for both Claude Code and Codex without per-agent branching. The reviewer applies one set of standards keyed on what files the diff touches, not on which agent is running. Both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` are first-class manifest paths (Codex's `find_plugin_manifest_path` officially discovers both); `.claude-plugin/marketplace.json` is the cross-platform marketplace format.
+**Universal-standards principle**: production skills and plugins should work for both Claude Code and Codex without per-agent branching. The reviewer applies one set of standards keyed on what files the diff touches, not on which agent is running. Both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` are first-class manifest paths (Codex's `find_plugin_manifest_path` officially discovers both); `.claude-plugin/marketplace.json` is the cross-platform marketplace format. Skills follow the [Agent Skills open standard](https://agentskills.io) — the same `SKILL.md` format works across multiple AI tools.
+
+**References** (official docs for the rules below):
+
+1. [Claude Code — Skills](https://code.claude.com/docs/en/skills)
+2. [Claude Code — Plugins reference](https://code.claude.com/docs/en/plugins-reference)
+3. [Claude Code — Hooks](https://code.claude.com/docs/en/hooks)
+4. [Claude Code — Memory (CLAUDE.md)](https://code.claude.com/docs/en/memory)
+5. [Claude Code — Sub-agents](https://code.claude.com/docs/en/sub-agents)
+6. [Codex — AGENTS.md](https://developers.openai.com/codex/guides/agents-md)
+7. [Codex — Hooks](https://developers.openai.com/codex/hooks)
+8. [Codex — Plugins / build](https://developers.openai.com/codex/plugins/build)
 
 ## Metadata
 
@@ -21,7 +32,7 @@ This reviewer combines two upstream concerns: **skill quality** (description tri
 Apply these regardless of file class — they hold for both Claude Code and Codex.
 
 1. **Naming**: skill / plugin / agent names are kebab-case, lowercase, no spaces; consistent across manifest, directory, and any user-facing references
-2. **Progressive disclosure**: large content lives in subdirectories beside SKILL.md (typically `references/` / `scripts/`); SKILL.md stays lean and points to those files clearly
+2. **Progressive disclosure**: large content lives in supporting files / subdirectories beside SKILL.md — Claude Code officially documents `examples/` and `scripts/` inside a skill directory [1]; Codex officially documents `assets/` at the plugin root [8]; `references/` is a widely-used convention. SKILL.md stays lean (≤500 lines per Claude Code guidance [1]) and points to those files clearly
 3. **Referenced files exist**: when SKILL.md or any prompt references `references/X.md` / `scripts/Y.sh` etc., those files actually exist in the diff or main
 4. **No hardcoded secrets**: scan all changed files for API keys, tokens, passwords, private URLs (regardless of whether the file is "production")
 5. **SemVer + version bump**: per repo CLAUDE.md, every PR that modifies a plugin bumps its `version` in **both** the plugin manifest **and** its marketplace entry. Diff modifies plugin files but neither version field changed → blocking. Recommended format: SemVer X.Y.Z
@@ -61,7 +72,7 @@ Note: Claude Code uses markdown agents inside plugins; Codex's native agent form
 ### `**/hooks/hooks.json` (or inline `hooks` in manifest)
 
 1. **Valid JSON**, each entry has `matcher` + `hooks` array
-2. **Event names valid** in the cross-platform set: `SessionStart`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`. Codex-only events (e.g., `PermissionRequest`) are acceptable but call out as Codex-specific
+2. **Event names valid** — both platforms officially share **6 events**: `SessionStart`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`, `PermissionRequest` [3][7]. Claude Code documents 30+ events in addition (`SessionEnd`, `Setup`, `Notification`, `PreCompact`, `SubagentStop`, etc. [3]); Codex documents only the 6 shared events [7]. Events outside the shared set are platform-specific — accept but call out as Claude-Code-only when used in a cross-platform plugin
 3. **Portable paths**: commands use `${CLAUDE_PLUGIN_ROOT}` (or platform equivalent) substitution, never absolute paths to a developer's machine
 
 ### `**/.mcp.json` OR `mcpServers` block in manifest
@@ -72,9 +83,9 @@ Note: Claude Code uses markdown agents inside plugins; Codex's native agent form
 
 ### `CLAUDE.md` / `AGENTS.md` (instruction files)
 
-1. **Both must exist** for cross-agent portability — Claude Code reads `CLAUDE.md` natively; Codex reads `AGENTS.md` natively. The conventional fix is `ln -s CLAUDE.md AGENTS.md` (or the reverse direction); diff that adds only one without the symlink → non-blocking finding recommending the symlink
-2. **Consistency when both exist as separate files** (not symlinked): content should be identical; divergence is a real bug
-3. **Lean entry-point** (~150 lines): per repo convention, instruction files are navigation directories, not encyclopedias. Detailed specs go under `docs/`. Don't review *content* correctness here — that's `docs-sync`'s job; this reviewer only checks consistency and existence of references
+1. **Both must exist** — blocking. Claude Code's official memory doc states "Claude Code reads CLAUDE.md, not AGENTS.md" and shows the symlink fix `ln -s AGENTS.md CLAUDE.md` [4]; Codex's official AGENTS.md doc states it "officially recognizes only AGENTS.md and AGENTS.override.md" [6]. Missing one breaks cross-agent portability. Recommended fixes (any one): symlink in either direction; `@AGENTS.md` import inside CLAUDE.md (Claude-Code-documented [4]); add `project_doc_fallback_filenames` in Codex config [6]
+2. **Consistency when both exist as separate files** (not symlinked): content should be identical; divergence is blocking — Claude users and Codex users would receive different instructions
+3. **Lean entry-point** (~200 lines per Claude Code guidance [4]): instruction files are navigation directories, not encyclopedias. Detailed specs go under `docs/`. Don't review *content* correctness here — that's `docs-sync`'s job; this reviewer only checks consistency and existence of references
 
 ## When to invoke
 
@@ -94,13 +105,13 @@ Worked scenarios:
 
 1. **Version not bumped.** Diff modifies `plugins/feishu-channel/skills/foo/SKILL.md` but neither `plugin.json` `version` nor the matching `marketplace.json` entry version changed. Reviewer flags blocking under "Version bump rule"; recommend a SemVer-appropriate bump.
 2. **Codex-style manifest.** Diff adds a new plugin with manifest at `.codex-plugin/plugin.json` (no `.claude-plugin/`). Reviewer applies the manifest block identically — required fields, version, marketplace alignment — and does **not** flag the missing `.claude-plugin/` (both paths are first-class).
-3. **Instruction file portability gap.** Diff adds `CLAUDE.md` at the plugin root but no `AGENTS.md`. Reviewer flags non-blocking: recommend `ln -s CLAUDE.md AGENTS.md` so Codex picks up the same instructions.
+3. **Instruction file portability gap.** Diff adds `CLAUDE.md` at the plugin root but no `AGENTS.md`. Reviewer flags **blocking**: cross-agent portability is broken — Codex won't see the instructions [6]. Recommend `ln -s AGENTS.md CLAUDE.md` (or the reverse direction; or add `@AGENTS.md` import inside CLAUDE.md [4]).
 4. **Agent description too vague.** Diff adds `agents/reviewer.md` whose description is "Reviews things." Reviewer flags under the SKILL.md description-quality bullet (same standard applies to agent descriptions); recommend specific trigger phrases and example blocks.
 
 ## Anti-patterns (don't do this)
 
 - ❌ Treating `.claude-plugin/plugin.json` as Claude-only — Codex officially discovers both manifest paths (verified in Codex source `find_plugin_manifest_path`); apply the same checks to either
-- ❌ Treating `CLAUDE.md` and `AGENTS.md` as redundant — they are intentionally mirrored for cross-agent portability; if only one is present, recommend a symlink; if both exist with diverged content, that's a real bug
+- ❌ Treating `CLAUDE.md` and `AGENTS.md` as redundant or downgrading the missing-pair finding to non-blocking — they are intentionally mirrored for cross-agent portability [4][6]; either both exist (one as symlink or `@import`) or cross-agent users see inconsistent instructions
 - ❌ Auto-rejecting unknown fields in manifests / hook configs — warn but do not fail (forwards-compatibility)
 - ❌ Reviewing the *content* of project instructions for correctness here — that's `docs-sync`'s job. This reviewer only checks instruction-file *consistency* and *existence* of references
 - ❌ Branching the checklist on "which agent is in use" — the standards are universal; what varies is which file class the diff touches
