@@ -1,6 +1,6 @@
 ---
 name: deep-review
-description: Run a formal, multi-dimensional code review of a pull request. Reads the PR diff, classifies change types, dispatches parallel reviewers by dimension (spec-conformance, correctness, test-quality, docs-sync, plus conditional robustness/security/ux/performance/structure, non-trivial code-quality, and detection-driven skill-plugin-quality), synthesizes findings into an actionable punch list. Use when the user asks to review a PR, run /deep-review, mark a PR as ready for review, or requests a formal/thorough code review.
+description: Run a formal, multi-dimensional code review of a pull request. Dispatches parallel reviewers (spec-conformance, correctness, test-quality, docs-sync, robustness, security, ux, performance, structure, code-quality, skill-plugin-quality) and synthesizes findings into a punch list. Use when the user asks to review a PR, run /deep-review, mark a PR as ready for review, or requests a formal/thorough code review.
 ---
 
 # Deep Review
@@ -49,7 +49,7 @@ For each dispatched reviewer, read `references/reviewers/<name>.md` and pass its
 
 **C. Non-trivial conditional (any non-trivial change):** `test-quality`, `code-quality`
 
-**D. Detection-driven conditional:** `skill-plugin-quality` — fires when diff contains any of: `.claude-plugin/` or `.codex-plugin/` paths, `marketplace.json`, `**/SKILL.md`, `**/agents/*.md` (with YAML frontmatter), `**/hooks.json` / `.toml`, `.mcp.json` or `mcpServers`, `CLAUDE.md`, `AGENTS.md`.
+**D. Detection-driven conditional:** `skill-plugin-quality` — fires when diff contains any of: `.claude-plugin/` or `.codex-plugin/` paths, `**/marketplace.json`, `**/SKILL.md`, `**/agents/*.md` (with YAML frontmatter), `**/hooks/hooks.json` / `**/hooks.toml`, `.mcp.json` or `mcpServers`, `CLAUDE.md`, `AGENTS.md`.
 
 Spec Conformance inputs must EXCLUDE the writer Agent's own commit messages, PR body rationale, "autonomous decisions" notes — those bias toward confirming the writer's reading. Spec source + diff only.
 

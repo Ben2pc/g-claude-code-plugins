@@ -21,7 +21,7 @@ This reviewer combines two upstream concerns: **skill quality** (description tri
 Apply these regardless of file class — they hold for both Claude Code and Codex.
 
 1. **Naming**: skill / plugin / agent names are kebab-case, lowercase, no spaces; consistent across manifest, directory, and any user-facing references
-2. **Progressive disclosure**: large content lives in `references/` / `scripts/` (and `examples/` for Claude / `assets/` for Codex — both harmless cross-platform); SKILL.md stays lean and points to those files clearly
+2. **Progressive disclosure**: large content lives in subdirectories beside SKILL.md (typically `references/` / `scripts/`); SKILL.md stays lean and points to those files clearly
 3. **Referenced files exist**: when SKILL.md or any prompt references `references/X.md` / `scripts/Y.sh` etc., those files actually exist in the diff or main
 4. **No hardcoded secrets**: scan all changed files for API keys, tokens, passwords, private URLs (regardless of whether the file is "production")
 5. **SemVer + version bump**: per repo CLAUDE.md, every PR that modifies a plugin bumps its `version` in **both** the plugin manifest **and** its marketplace entry. Diff modifies plugin files but neither version field changed → blocking. Recommended format: SemVer X.Y.Z
@@ -41,7 +41,7 @@ Apply each block only when the diff touches a file of that class. Multiple block
 
 1. **Valid JSON syntax**
 2. **Required fields**: `name` (kebab-case), `version` (SemVer recommended), `description`. (Codex requires all three; Claude only requires `name` — adopting the stricter set keeps the plugin portable.)
-3. **Path field semantics**: `skills` / `mcpServers` / `hooks` paths in the manifest resolve to files that exist in the plugin
+3. **Path field semantics**: `skills` / `mcpServers` / `hooks` paths in the manifest resolve to a file or directory (per field semantics — e.g. `skills` is typically directory-valued, `hooks` is typically file-valued) that exists in the plugin
 
 ### `**/marketplace.json`
 
