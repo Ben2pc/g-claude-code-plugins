@@ -31,7 +31,7 @@ Also judge **trivial** (single-line, pure config/doc) vs **non-trivial** (any co
 
 ### 2. Dispatch reviewers (4 categories, all in parallel)
 
-For each dispatched reviewer, read `references/reviewers/<name>.md` and pass its checklist + Detection table + output contract into the subagent. The Metadata block specifies Model / Effort / Tools.
+For each dispatched reviewer, read `references/reviewers/<name>.md` and pass its checklist + Detection table + output contract into the subagent. The Metadata block specifies `Reasoning` tier (`flagship` → platform top model, e.g. Opus / GPT-5.4; `workhorse` → just-below-flagship, e.g. Sonnet / GPT-5.4-mini), `Tools`, and optional `Effort` (defaults to `high` for formal review when unspecified).
 
 **Project-level custom reviewers**: also discover `docs/rules/review/*.md` (silent if the directory is absent). For each custom file, parse its Metadata `Trigger` field and route into the matching dispatch category (A/B/C/D). If a custom reviewer's name collides with a built-in, skip + warn — never override built-ins. Use the `reviewer-creator` skill to scaffold new ones.
 

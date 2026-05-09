@@ -10,8 +10,7 @@ This reviewer covers two related concerns: (i) **codebase organization** (where 
 
 - **Best for**: Module organization, dependency graph health, type design quality
 - **Trigger**: tag:structure
-- **Model**: opus
-- **Effort**: high
+- **Reasoning**: flagship
 - **Tools**: Read, Grep, Glob (read-only)
 - **Value**: Structure rot accumulates silently and becomes painful to fix later; catching it at PR time is cheap
 

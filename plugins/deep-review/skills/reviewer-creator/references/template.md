@@ -8,8 +8,7 @@ The checklist below is a **starting point, not a fence**. It covers common <DOMA
 
 - **Best for**: <BEST_FOR>
 - **Trigger**: <TRIGGER>
-- **Model**: opus
-- **Effort**: high
+- **Reasoning**: <REASONING>
 - **Tools**: Read, Grep, Glob (read-only)
 - **Value**: <TODO: one-line value statement — what does this reviewer prevent that built-ins miss?>
 

@@ -13,8 +13,7 @@ This reviewer carries **two lenses**. Group your findings under the matching sub
 
 - **Best for**: Code that compiles and runs but will hurt the next person who reads it
 - **Trigger**: non-trivial
-- **Model**: sonnet
-- **Effort**: high
+- **Reasoning**: workhorse
 - **Tools**: Read, Grep, Glob (read-only)
 - **Value**: Maintainability defects compound; this reviewer prevents them from accumulating one PR at a time
 

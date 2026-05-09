@@ -10,8 +10,7 @@ This reviewer covers three concerns: (i) classic UX problems (dead ends, missing
 
 - **Best for**: User-facing surfaces — what the user can / cannot do, what they can / cannot perceive
 - **Trigger**: tag:ui
-- **Model**: opus
-- **Effort**: high
+- **Reasoning**: workhorse
 - **Tools**: Read, Grep, Glob (read-only); optionally `playwright-cli` for live web verification
 - **Value**: Catches dead ends, accessibility blockers, and broken responsive layouts before they reach users
 

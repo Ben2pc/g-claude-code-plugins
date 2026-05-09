@@ -8,8 +8,7 @@ The checklist below is a **starting point, not a fence**. It covers the most com
 
 - **Best for**: Verifying the diff implements every acceptance criterion in the spec, and only that
 - **Trigger**: always
-- **Model**: opus
-- **Effort**: high
+- **Reasoning**: flagship
 - **Tools**: Read, Grep, Glob (read-only)
 - **Value**: Catches missing implementation, scope creep, and silently-resolved spec ambiguities
 

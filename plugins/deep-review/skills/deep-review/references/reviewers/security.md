@@ -10,7 +10,7 @@ This reviewer fires only when the `auth-sensitive` sub-tag is set on top of `log
 
 - **Best for**: Auth, authorization, crypto, secret handling, payment paths — anywhere a defect lets the wrong person do the wrong thing
 - **Trigger**: tag:auth-sensitive
-- **Model**: opus
+- **Reasoning**: flagship
 - **Effort**: xhigh
 - **Tools**: Read, Grep, Glob (read-only)
 - **Value**: Auth defects are high-blast-radius; the larger reasoning budget pays for itself even on negative findings

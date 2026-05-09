@@ -10,8 +10,7 @@ This reviewer focuses on **production code only**. Reviewing test files (asserti
 
 - **Best for**: Production-code logic correctness — bugs, contracts, data handling
 - **Trigger**: always
-- **Model**: opus
-- **Effort**: high
+- **Reasoning**: flagship
 - **Tools**: Read, Grep, Glob (read-only)
 - **Value**: Catches functional defects before they hit users; complements test-quality (which catches *what's untested*)
 

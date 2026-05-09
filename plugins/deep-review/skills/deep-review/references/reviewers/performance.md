@@ -10,8 +10,7 @@ This reviewer covers three sub-focuses — apply the one(s) matching the changed
 
 - **Best for**: Catching latency / memory / battery regressions before they reach a user-noticeable threshold
 - **Trigger**: tag:perf
-- **Model**: opus
-- **Effort**: high
+- **Reasoning**: workhorse
 - **Tools**: Read, Grep, Glob (read-only)
 - **Value**: Performance regressions are silent — they don't fail tests, only get noticed when users complain
 

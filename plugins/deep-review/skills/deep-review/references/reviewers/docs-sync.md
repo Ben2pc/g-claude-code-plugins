@@ -10,8 +10,7 @@ Guiding principle: **no docs is better than wrong docs.** Code is documentation;
 
 - **Best for**: Catching documentation that drifts from the code it describes — comments, README, CLAUDE.md, API docs
 - **Trigger**: always
-- **Model**: sonnet
-- **Effort**: high
+- **Reasoning**: workhorse
 - **Tools**: Read, Grep, Glob (read-only)
 - **Value**: Stale documentation is technical debt that compounds; this reviewer prevents it from accumulating in a single PR cycle
 

@@ -12,8 +12,7 @@ This reviewer combines two upstream concerns: **skill quality** (description tri
 
 - **Best for**: Catching plugin / skill / agent format errors and quality issues that escape regular code review
 - **Trigger**: detection-driven
-- **Model**: opus
-- **Effort**: high
+- **Reasoning**: workhorse
 - **Tools**: Read, Grep, Glob, Bash (read-only — Bash for `jq` / line counts only, no writes)
 - **Value**: This repo is a marketplace; a malformed plugin breaks installs for everyone who tries it. Catching schema / version / naming bugs at PR time is much cheaper than post-merge
 

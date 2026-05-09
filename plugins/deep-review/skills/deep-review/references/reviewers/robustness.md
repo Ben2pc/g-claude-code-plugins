@@ -15,8 +15,7 @@ When the `auth-sensitive` sub-tag fires, the **Security** lens is split out into
 
 - **Best for**: Catching how the code fails when the world misbehaves
 - **Trigger**: tag:logic
-- **Model**: opus
-- **Effort**: high
+- **Reasoning**: flagship
 - **Tools**: Read, Grep, Glob (read-only)
 - **Value**: Edge-case bugs are the long tail of production incidents; this reviewer surfaces them before users do
 

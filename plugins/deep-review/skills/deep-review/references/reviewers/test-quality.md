@@ -10,8 +10,7 @@ This reviewer covers **two scenarios**: tests-present (quality review) and tests
 
 - **Best for**: Both reviewing test quality and surfacing missing coverage on new production behavior
 - **Trigger**: non-trivial
-- **Model**: opus
-- **Effort**: high
+- **Reasoning**: flagship
 - **Tools**: Read, Grep, Glob (read-only)
 - **Value**: Catches over-mocked / brittle / flaky / behavior-blind tests, AND catches "diff added behavior with no tests"
 
