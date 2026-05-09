@@ -33,6 +33,8 @@ Also judge **trivial** (single-line, pure config/doc) vs **non-trivial** (any co
 
 For each dispatched reviewer, read `references/reviewers/<name>.md` and pass its checklist + Detection table + output contract into the subagent. The Metadata block specifies Model / Effort / Tools.
 
+**Project-level custom reviewers**: also discover `docs/rules/review/*.md` (silent if the directory is absent). For each custom file, parse its Metadata `Trigger` field and route into the matching dispatch category (A/B/C/D). If a custom reviewer's name collides with a built-in, skip + warn — never override built-ins. Use the `reviewer-creator` skill to scaffold new ones.
+
 **A. Required (always fire):** `spec-conformance`, `correctness`, `docs-sync`
 
 **B. Conditional by tag:**
@@ -88,3 +90,4 @@ Small architectural-decay fixes can land in the current PR if they don't break t
 - ❌ Splitting already-merged dimensions (Code Quality's Consistency+Maintainability, Robustness's Security+Edge-cases) unless `auth-sensitive` fires — merges are deliberate token-cost optimizations that preserve every checklist item
 - ❌ Merging `test-quality` back into `correctness` — splitting is what makes "tests should exist but don't" findings visible
 - ❌ Failing a Codex-only plugin in `skill-plugin-quality` for missing `.claude-plugin/` — apply detection-then-apply (identify framework, then apply matching standard)
+- ❌ Letting a custom reviewer in `docs/rules/review/` override a built-in by sharing its name — skip + warn instead. Built-ins are the canonical safety net; project additions extend, never replace
