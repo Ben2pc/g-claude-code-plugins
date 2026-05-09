@@ -48,7 +48,7 @@ Treat this pass as a **coverage stage, not a filtering stage**. Report every iss
 
 Return:
 
-- Summary of **at most 200 words**
+- Summary of **at most 300 words**
 - Followed by a bullet list, each: `<file>:<line> — <one-line description> — [severity: blocking | non-blocking] — [confidence: high | medium | low]`
 
 <TODO: if your reviewer has multiple lenses or sub-categories, add an extra tag to each finding (see robustness.md `[lens: security | edge-cases]` for an example, or security.md `[category: auth | authz | secret | crypto | injection | other]`). Otherwise leave this paragraph as-is.>

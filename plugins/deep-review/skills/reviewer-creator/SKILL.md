@@ -91,11 +91,11 @@ Print a short summary:
 
 ```
 User: /reviewer-creator
-Assistant: [walks through 6 questions; user provides:
+Assistant: [walks through 7 questions; user provides:
             name=migration-safety, best_for="catches unsafe DB migrations",
             domain="migration safety", trigger=detection-driven, signals=
             (*.sql files, ALTER TABLE patterns, drop_column calls,
-            migrations/ directory), 1 scenario]
+            migrations/ directory), reasoning=workhorse, 1 scenario]
 Assistant: [generates docs/rules/review/migration-safety.md]
 Assistant: "File created. Next: fill in Checklist (5–10 specific safety
             checks like 'NOT NULL added without backfill?', 'concurrent
