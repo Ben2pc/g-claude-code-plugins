@@ -64,7 +64,7 @@ Skills that live outside plugins, under `skills/` at the repo root:
 | Skill | Description |
 |-------|-------------|
 | [claude-code-agent](./skills/claude-code-agent) | Delegate tasks to an independent Claude Code CLI instance |
-| [codex-agent](./skills/codex-agent) | Delegate tasks to Codex (GPT-5.4) via Codex CLI |
+| [codex-agent](./skills/codex-agent) | Delegate tasks to Codex via Codex CLI |
 | [ip-diagnosis](./skills/ip-diagnosis) | Diagnose public IPv4/IPv6, DNS, route, utun, and WebRTC exposure on macOS + Chrome |
 | [deep-review](./skills/deep-review) | Multi-dimensional PR review orchestrator (required + conditional reviewers + punch list) |
 | [test-designer](./skills/test-designer) | Independent-Evaluation test designer for TDD red phase |
