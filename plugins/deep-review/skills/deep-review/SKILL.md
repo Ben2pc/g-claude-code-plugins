@@ -47,7 +47,7 @@ For each dispatched reviewer, read `references/reviewers/<name>.md` and pass its
 
 **C. Non-trivial conditional (any non-trivial change):** `test-quality`, `code-quality`
 
-**D. Detection-driven conditional (Detection signals match in diff):** `plugin-quality`
+**D. Detection-driven conditional:** `plugin-quality` — fires when diff contains any of: `.claude-plugin/` paths, `marketplace.json`, `**/SKILL.md`, `**/agents/*.md` (with YAML frontmatter), `**/hooks.json` / `.toml`, `.mcp.json` or `mcpServers`, `AGENTS.md`, `codex:` references.
 
 Spec Conformance inputs must EXCLUDE the writer Agent's own commit messages, PR body rationale, "autonomous decisions" notes — those bias toward confirming the writer's reading. Spec source + diff only.
 

@@ -4,7 +4,7 @@
 
 The checklist below is a **starting point, not a fence**. It covers the most common plugin / skill / agent quality patterns — but report any concern in this dimension that you would raise to a thoughtful colleague reviewing this PR, including categories not enumerated here. The patterns are training wheels for completeness; the goal is judgment.
 
-This reviewer fires only when Detection signals match (new dispatch category: **detection-driven conditional**). It is not bound to a tag and is not in the always-fire / non-trivial sets. The reviewer combines two upstream concerns: **skill quality** (description triggering, lean SKILL.md, progressive disclosure) and **plugin validation** (manifest schema, naming, security, versioning).
+This reviewer combines two upstream concerns: **skill quality** (description triggering, lean SKILL.md, progressive disclosure) and **plugin validation** (manifest schema, naming, security, versioning). It is dispatched by SKILL.md's detection-driven category — see SKILL.md for trigger conditions.
 
 **Critical compatibility rule**: this reviewer must support **both Claude Code and Codex** plugin formats. Apply **detection-then-apply**: identify the framework first, then apply the matching standard. Do **not** fail a Codex-only plugin for missing `.claude-plugin/` — that path is Claude-specific.
 
@@ -60,11 +60,11 @@ This reviewer fires only when Detection signals match (new dispatch category: **
 3. **AGENTS.md is the canonical instruction file** for Codex; if the plugin ships project instructions, they must be in or symlinked from `AGENTS.md`
 4. **Skill format compatibility**: SKILL.md frontmatter (name + description) is shared between frameworks — fall through to the Shared core checklist for body / disclosure / naming
 
-## When to invoke (detection-driven)
+## When to invoke
 
-This reviewer fires only when at least one Detection signal matches in the diff. The signals are **trigger conditions**, not focus hints — if nothing matches, the reviewer does not run. (Note: this is the column header convention for detection-driven reviewers; required and tag-conditional reviewers use `Recommend focus on` because they always fire and the signals only refine attention.)
+Fires when SKILL.md's detection-driven dispatch matches (the canonical trigger signal list lives in SKILL.md). The Detection table below indicates which signal(s) triggered the dispatch so the reviewer can focus its checklist accordingly.
 
-| Recommend firing when | Detection |
+| Recommend focus on | Detection |
 |---|---|
 | Claude plugin structure | `.claude-plugin/plugin.json` / `plugins/*/.claude-plugin/` / `marketplace.json` in diff |
 | Skill | Any `**/SKILL.md` in diff (either framework) |
