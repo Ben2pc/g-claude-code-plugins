@@ -49,7 +49,7 @@ For each dispatched reviewer, read `references/reviewers/<name>.md` and pass its
 
 **C. Non-trivial conditional (any non-trivial change):** `test-quality`, `code-quality`
 
-**D. Detection-driven conditional:** `skill-plugin-quality` — fires when diff contains any of: `.claude-plugin/` paths, `marketplace.json`, `**/SKILL.md`, `**/agents/*.md` (with YAML frontmatter), `**/hooks.json` / `.toml`, `.mcp.json` or `mcpServers`, `AGENTS.md`, `codex:` references.
+**D. Detection-driven conditional:** `skill-plugin-quality` — fires when diff contains any of: `.claude-plugin/` or `.codex-plugin/` paths, `marketplace.json`, `**/SKILL.md`, `**/agents/*.md` (with YAML frontmatter), `**/hooks.json` / `.toml`, `.mcp.json` or `mcpServers`, `CLAUDE.md`, `AGENTS.md`.
 
 Spec Conformance inputs must EXCLUDE the writer Agent's own commit messages, PR body rationale, "autonomous decisions" notes — those bias toward confirming the writer's reading. Spec source + diff only.
 
@@ -89,5 +89,4 @@ Small architectural-decay fixes can land in the current PR if they don't break t
 - ❌ Telling reviewers "only report high-severity", "be conservative", or "don't nitpick" — Opus 4.7+ silently drop real findings; filter at synthesis, not per-reviewer
 - ❌ Splitting already-merged dimensions (Code Quality's Consistency+Maintainability, Robustness's Security+Edge-cases) unless `auth-sensitive` fires — merges are deliberate token-cost optimizations that preserve every checklist item
 - ❌ Merging `test-quality` back into `correctness` — splitting is what makes "tests should exist but don't" findings visible
-- ❌ Failing a Codex-only plugin in `skill-plugin-quality` for missing `.claude-plugin/` — apply detection-then-apply (identify framework, then apply matching standard)
 - ❌ Letting a custom reviewer in `docs/rules/review/` override a built-in by sharing its name — skip + warn instead. Built-ins are the canonical safety net; project additions extend, never replace
