@@ -38,7 +38,7 @@ Collect in order:
    - `non-trivial` — fires for any non-trivial change
    - `detection-driven` — fires only when Detection signals match (recommended default for narrow concerns)
 5. **Detection signals** — ≥3 grep-able rows (path globs / import patterns / API call patterns). Required for `detection-driven`; useful as focus hints for other categories
-6. **Reasoning tier** — `flagship` (deep multi-hop reasoning required — e.g., bug hunting, architectural judgment) or `workhorse` (pattern matching / checklist verification). Each platform maps these to its own model class: Claude flagship → Opus, workhorse → Sonnet; Codex flagship → GPT-5.4, workhorse → GPT-5.4-mini. Default to `workhorse` unless the reviewer needs cross-cutting reasoning over the diff
+6. **Reasoning tier** — `flagship` (deep multi-hop reasoning required — e.g., bug hunting, architectural judgment) or `workhorse` (pattern matching / checklist verification). Each platform maps these to its own model class: Claude flagship → Opus, workhorse → Sonnet; Codex flagship → GPT-5.5, workhorse → GPT-5.5-mini. Default to `workhorse` unless the reviewer needs cross-cutting reasoning over the diff
 7. **One worked scenario** — concrete file:line-style example of a problem this reviewer would catch (seeds the Worked scenarios section; ≥2 more become TODOs)
 
 ### 2. Generate the file
