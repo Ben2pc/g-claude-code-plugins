@@ -1,4 +1,4 @@
-# Plugin Quality Reviewer (detection-driven)
+# Skill / Plugin Quality Reviewer (detection-driven)
 
 ## Scope
 
