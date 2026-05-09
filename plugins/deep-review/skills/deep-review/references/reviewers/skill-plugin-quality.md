@@ -19,12 +19,26 @@ This reviewer combines two upstream concerns: **skill quality** (description tri
 7. [Codex — Hooks](https://developers.openai.com/codex/hooks)
 8. [Codex — Plugins / build](https://developers.openai.com/codex/plugins/build)
 
+**Authoritative source rule**: the official docs above are the source of truth. The inline summaries in the checklist below are caches that may drift as Claude Code / Codex evolve. **Before applying a per-file-conditional block, fetch the corresponding doc(s) and apply the latest guidance**:
+
+| File class fires | Fetch (refs) |
+|---|---|
+| `**/SKILL.md` | [1], [8] |
+| Manifest (`.claude-plugin/plugin.json` / `.codex-plugin/plugin.json`) | [2], [8] |
+| `**/marketplace.json` | [2], [8] |
+| `**/agents/*.md` | [5] |
+| `**/hooks/hooks.json` | [3], [7] |
+| `.mcp.json` / `mcpServers` | [2], [8] |
+| `CLAUDE.md` / `AGENTS.md` | [4], [6] |
+
+If a fetched doc contradicts the inline summary in this file, **report the inline rule as stale** (`<this file>:<line> — inline rule disagrees with [N] — [severity: non-blocking] — [confidence: high] — [file-class: universal]`) so the human reviewer can update the reviewer file. Apply the official doc to the actual diff, not the stale summary. Skip the fetch only if WebFetch is unavailable; in that case, prefix the summary with `[unverified — falling back to cached rule]` so the human knows the freshness is uncertain.
+
 ## Metadata
 
 - **Best for**: Catching plugin / skill / agent format errors and quality issues that escape regular code review
 - **Trigger**: detection-driven
 - **Reasoning**: workhorse
-- **Tools**: Read, Grep, Glob, Bash (read-only — Bash for `jq` / line counts only, no writes)
+- **Tools**: Read, Grep, Glob, WebFetch, Bash (read-only — Bash for `jq` / line counts only, no writes; WebFetch for fetching the official Claude Code / Codex docs in References below)
 - **Value**: This repo is a marketplace; a malformed plugin breaks installs for everyone who tries it. Catching schema / version / naming bugs at PR time is much cheaper than post-merge
 
 ## Checklist — Universal core
