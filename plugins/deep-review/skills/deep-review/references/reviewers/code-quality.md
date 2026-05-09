@@ -12,6 +12,7 @@ This reviewer carries **two lenses**. Group your findings under the matching sub
 ## Metadata
 
 - **Best for**: Code that compiles and runs but will hurt the next person who reads it
+- **Trigger**: non-trivial
 - **Model**: sonnet
 - **Effort**: high
 - **Tools**: Read, Grep, Glob (read-only)

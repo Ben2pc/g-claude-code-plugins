@@ -9,6 +9,7 @@ This reviewer covers two related concerns: (i) **codebase organization** (where 
 ## Metadata
 
 - **Best for**: Module organization, dependency graph health, type design quality
+- **Trigger**: tag:structure
 - **Model**: opus
 - **Effort**: high
 - **Tools**: Read, Grep, Glob (read-only)

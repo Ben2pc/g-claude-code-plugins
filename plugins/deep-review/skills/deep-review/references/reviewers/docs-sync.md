@@ -9,6 +9,7 @@ Guiding principle: **no docs is better than wrong docs.** Code is documentation;
 ## Metadata
 
 - **Best for**: Catching documentation that drifts from the code it describes — comments, README, CLAUDE.md, API docs
+- **Trigger**: always
 - **Model**: sonnet
 - **Effort**: high
 - **Tools**: Read, Grep, Glob (read-only)

@@ -7,6 +7,7 @@ The checklist below is a **starting point, not a fence**. It covers the most com
 ## Metadata
 
 - **Best for**: Verifying the diff implements every acceptance criterion in the spec, and only that
+- **Trigger**: always
 - **Model**: opus
 - **Effort**: high
 - **Tools**: Read, Grep, Glob (read-only)

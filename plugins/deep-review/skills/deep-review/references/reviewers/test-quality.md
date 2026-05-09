@@ -9,6 +9,7 @@ This reviewer covers **two scenarios**: tests-present (quality review) and tests
 ## Metadata
 
 - **Best for**: Both reviewing test quality and surfacing missing coverage on new production behavior
+- **Trigger**: non-trivial
 - **Model**: opus
 - **Effort**: high
 - **Tools**: Read, Grep, Glob (read-only)

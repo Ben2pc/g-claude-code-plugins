@@ -9,6 +9,7 @@ This reviewer focuses on **production code only**. Reviewing test files (asserti
 ## Metadata
 
 - **Best for**: Production-code logic correctness — bugs, contracts, data handling
+- **Trigger**: always
 - **Model**: opus
 - **Effort**: high
 - **Tools**: Read, Grep, Glob (read-only)

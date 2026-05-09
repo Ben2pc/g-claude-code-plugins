@@ -11,6 +11,7 @@ This reviewer combines two upstream concerns: **skill quality** (description tri
 ## Metadata
 
 - **Best for**: Catching plugin / skill / agent format errors and quality issues that escape regular code review
+- **Trigger**: detection-driven
 - **Model**: opus
 - **Effort**: high
 - **Tools**: Read, Grep, Glob, Bash (read-only — Bash for `jq` / line counts only, no writes)

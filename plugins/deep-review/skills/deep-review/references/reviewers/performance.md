@@ -9,6 +9,7 @@ This reviewer covers three sub-focuses — apply the one(s) matching the changed
 ## Metadata
 
 - **Best for**: Catching latency / memory / battery regressions before they reach a user-noticeable threshold
+- **Trigger**: tag:perf
 - **Model**: opus
 - **Effort**: high
 - **Tools**: Read, Grep, Glob (read-only)

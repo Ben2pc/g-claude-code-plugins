@@ -9,6 +9,7 @@ This reviewer fires only when the `auth-sensitive` sub-tag is set on top of `log
 ## Metadata
 
 - **Best for**: Auth, authorization, crypto, secret handling, payment paths — anywhere a defect lets the wrong person do the wrong thing
+- **Trigger**: tag:auth-sensitive
 - **Model**: opus
 - **Effort**: xhigh
 - **Tools**: Read, Grep, Glob (read-only)

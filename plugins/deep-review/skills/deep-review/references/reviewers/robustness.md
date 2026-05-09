@@ -14,6 +14,7 @@ When the `auth-sensitive` sub-tag fires, the **Security** lens is split out into
 ## Metadata
 
 - **Best for**: Catching how the code fails when the world misbehaves
+- **Trigger**: tag:logic
 - **Model**: opus
 - **Effort**: high
 - **Tools**: Read, Grep, Glob (read-only)
