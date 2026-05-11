@@ -636,7 +636,7 @@
     return [
       '请处理以下 session-compound 输出。每段对应一个沉淀路径，不要混淆：',
       '',
-      '**`## existing-skill`** — 步骤 4 预查 ecosystem 时找到的可复用 skill。请直接执行每条 body 里附的 `npx skills add <owner/repo@skill> -g -y` 命令安装；安装成功后简短确认，无需再 scaffold 新 skill（这一段就是为了**避免**造重复轮子）。',
+      '**`## existing-skill`** — 步骤 4 预查 ecosystem 时找到的可复用 skill。请直接执行每条 body 里附的 `npx -y skills add <owner/repo@skill> -a codex claude-code -y` 命令安装（注意：`npx -y` 在前给 npx 自动升级用；`-a codex claude-code` 同时装到 codex 和 claude-code 两个 agent；末尾 `-y` 跳过 skills CLI 自己的确认）。安装成功后简短确认，无需再 scaffold 新 skill。',
       '',
       '**`## feedback` / `## project` / `## reference` / `## user`** — 全局 memory 条目。按 CLAUDE.md 中 auto memory 规范，每条写入全局 memory 目录的独立文件，并在 MEMORY.md 加一行索引。`### <name>` 作为 memory 文件名和 frontmatter 中的 `name` / `description`；`## <type>` 作为 memory 的 `type`。',
       '',

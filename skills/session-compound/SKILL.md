@@ -169,8 +169,12 @@ Schema：
   ```
   **来源**: <owner/repo@skill> · <NK installs> · <skills.sh URL>
   **解决的本会话问题**: <为什么这个 skill 适合本会话出现的某个模式>
-  **安装命令**: `npx skills add <owner/repo@skill> -g -y`
+  **安装命令**: `npx -y skills add <owner/repo@skill> -a codex claude-code -y`
   ```
+  安装命令拆解：
+  - `npx -y` — `-y` 在前面，让 npx 自动升级 / 拉包，跳过"need to install? (y/N)"询问
+  - `-a codex claude-code` — `skills add` 的 `-a` 收集后续所有非 flag 参数，所以**空格分隔**多个 agent。本仓库只针对这两个 agent
+  - 末尾 `-y` — `skills add` 自身的"yes to confirmation prompts"
   勾选后会进入合成的 prompt，下游 agent 会自动执行 `npx skills add` 安装
 - **`feedback`** — 用户对你给的纠正 / 偏好。正文结构：先写规则，再写 `**Why:**` 和 `**How to apply:**` 两行
 - **`project`** — 关于在做的项目的事实（截止日期、相关人、决策）。正文同 feedback 结构
