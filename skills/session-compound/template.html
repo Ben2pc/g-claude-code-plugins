@@ -373,17 +373,15 @@
     flex-shrink: 0;
     font-weight: 600;
   }
-  .candidate .type.feedback  { color: #8b6a0e;   border-color: rgba(212, 160, 23, 0.28);  background: rgba(232, 165, 90, 0.12); }
-  .candidate .type.project   { color: #2e7a6c;   border-color: rgba(93, 184, 166, 0.32);  background: rgba(93, 184, 166, 0.1); }
-  .candidate .type.reference { color: #5a4a8a;   border-color: rgba(120, 100, 180, 0.28); background: rgba(120, 100, 180, 0.08); }
-  .candidate .type.user      { color: #2e7a6c;   border-color: rgba(93, 184, 166, 0.32);  background: rgba(93, 184, 166, 0.1); }
+  /* Only three candidate types remain: existing-skill (cheapest action),
+     agent-md (writes into the AGENTS.md system), skill-gap (build something new). */
   .candidate .type.existing-skill {
     color: var(--on-primary);
     border-color: transparent;
     background: var(--primary);
   }
-  .candidate .type.agent-md, .candidate .type.claude-md {
-    color: var(--primary); border-color: rgba(204, 120, 92, 0.32); background: rgba(204, 120, 92, 0.08);
+  .candidate .type.agent-md {
+    color: #2e7a6c; border-color: rgba(93, 184, 166, 0.32); background: rgba(93, 184, 166, 0.1);
   }
   .candidate .type.skill-gap {
     color: #5a4a8a; border-color: rgba(120, 100, 180, 0.32); background: rgba(120, 100, 180, 0.1);
@@ -816,14 +814,14 @@
     idx: i,
     selected: c.default_selected !== false,
     name: c.name || `candidate-${i}`,
-    type: c.type || 'project',
+    type: c.type || 'agent-md',
     body: c.body || '',
   }));
 
   // Visually surface ecosystem recommendations (existing-skill) at the top
   // of the candidate list — they're cheaper to act on than building a new
   // skill, so users should see them first. Stable sort otherwise.
-  const TYPE_ORDER = ['existing-skill', 'feedback', 'project', 'reference', 'user', 'agent-md', 'claude-md', 'skill-gap'];
+  const TYPE_ORDER = ['existing-skill', 'agent-md', 'skill-gap'];
   const orderIdx = (t) => {
     const i = TYPE_ORDER.indexOf(t);
     return i === -1 ? TYPE_ORDER.length : i;
