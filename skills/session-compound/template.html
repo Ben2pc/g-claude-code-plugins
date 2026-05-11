@@ -6,278 +6,410 @@
 <title>Session Compound — REPORT_TITLE</title>
 <style>
   :root {
-    --bg: #0b0d10;
-    --bg-elev: #14171c;
-    --bg-elev2: #1b1f26;
-    --border: #2a2f37;
-    --border-strong: #3a4150;
-    --text: #e6e9ee;
-    --text-dim: #9aa3b2;
-    --text-mute: #6b7280;
-    --accent: #7aa7ff;
-    --good: #58c995;
-    --warn: #f0b86e;
-    --bad: #ef6f6f;
-    --info: #7aa7ff;
-    --mono: ui-monospace, SFMono-Regular, Menlo, "JetBrains Mono", Consolas, monospace;
-    --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    /* Off-blacks, never #000 */
+    --bg: #0a0c10;
+    --bg-elev: #13161c;
+    --bg-elev2: #1a1e25;
+    --bg-inset: #0e1116;
+    /* Subtle borders; we lean on shadow over hard lines */
+    --border: rgba(255, 255, 255, 0.06);
+    --border-strong: rgba(255, 255, 255, 0.1);
+    --text: #e9ecf1;
+    --text-dim: #a3acba;
+    --text-mute: #6b7484;
+    /* Slightly desaturated accent — avoid pure AI blue/purple */
+    --accent: #6fb1c9;
+    --accent-fg: #08111a;
+    --good: #5fb888;
+    --warn: #e5a85f;
+    --bad: #d97474;
+    --info: #6fb1c9;
+    /* Concentric radius scale: chips < buttons < cards < containers */
+    --r-chip: 6px;
+    --r-btn: 8px;
+    --r-inner: 10px;
+    --r-card: 14px;
+    --r-container: 18px;
+    /* Tints used throughout */
+    --tint-inset: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+    --tint-shadow: 0 6px 24px -14px rgba(0, 0, 0, 0.5);
+    --tint-shadow-strong: 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+    --ease: cubic-bezier(0.2, 0, 0, 1);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", Consolas, monospace;
+    --ui: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
   }
+
   * { box-sizing: border-box; }
-  html, body { background: var(--bg); color: var(--text); margin: 0; }
-  body { font: 14px/1.5 var(--ui); padding: 32px 28px 80px; max-width: 1280px; margin: 0 auto; }
-  h1, h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
-  h1 { font-size: 28px; margin: 0 0 4px; }
-  h2 { font-size: 18px; margin: 32px 0 12px; color: var(--text); }
-  h3 { font-size: 14px; margin: 18px 0 8px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
-  code, .mono { font-family: var(--mono); font-size: 12.5px; }
+  html { color-scheme: dark; }
+  html, body {
+    background: radial-gradient(120% 80% at 50% -10%, #15191f 0%, var(--bg) 55%) fixed, var(--bg);
+    color: var(--text);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    font: 14px/1.55 var(--ui);
+    padding: 40px 28px 96px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  h1, h2, h3 { font-weight: 600; letter-spacing: -0.012em; text-wrap: balance; }
+  h1 { font-size: 30px; line-height: 1.15; margin: 0 0 6px; }
+  h2 { font-size: 17px; margin: 32px 0 12px; color: var(--text); }
+  h3 { font-size: 12.5px; margin: 18px 0 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  p { text-wrap: pretty; }
+
+  /* Monospace digits everywhere */
+  code, .mono, .num, .tokens, .count, .fig {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+  code { font-size: 12.5px; background: rgba(255,255,255,0.04); padding: 1px 5px; border-radius: 4px; }
+
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
+
+  /* Stagger enter — used by anything with style="--i: N" */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translate3d(0, 6px, 0); }
+    to   { opacity: 1; transform: none; }
+  }
+  .stagger {
+    animation: fadeUp 0.42s var(--ease) backwards;
+    animation-delay: calc(var(--i, 0) * 40ms);
+  }
 
   /* Hero */
   .hero {
     background: var(--bg-elev);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 22px 24px;
+    border-radius: var(--r-container);
+    padding: 28px 32px;
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 24px;
-    align-items: center;
+    align-items: end;
+    box-shadow: var(--tint-inset), var(--tint-shadow-strong);
   }
-  .hero .meta { color: var(--text-dim); font-size: 13px; margin-top: 6px; }
-  .hero .meta .pill {
-    display: inline-block;
-    padding: 2px 8px;
-    margin-right: 6px;
-    background: var(--bg-elev2);
+  .hero .meta { color: var(--text-dim); font-size: 12.5px; margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .hero .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: var(--bg-inset);
     border: 1px solid var(--border);
     border-radius: 999px;
     font-size: 11.5px;
     color: var(--text-dim);
+    white-space: nowrap;
   }
-  .hero .pill.cli-claude-code { color: #c4a4ff; border-color: #4d3d80; }
-  .hero .pill.cli-codex { color: #7adfa0; border-color: #2f5d40; }
-  .hero .total {
-    text-align: right;
-  }
-  .hero .total .num {
-    font-family: var(--mono);
-    font-size: 32px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-  }
-  .hero .total .lbl { color: var(--text-mute); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .hero .pill.cli-claude-code { color: #c4a4ff; border-color: rgba(196, 164, 255, 0.25); }
+  .hero .pill.cli-codex       { color: #7adfa0; border-color: rgba(122, 223, 160, 0.25); }
+  .hero .total { text-align: right; min-width: 200px; }
+  .hero .total .num { font-size: 36px; font-weight: 600; letter-spacing: -0.025em; line-height: 1; }
+  .hero .total .lbl { color: var(--text-mute); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px; }
 
   /* Tabs */
   .tabs {
     display: flex;
-    gap: 4px;
+    gap: 2px;
     border-bottom: 1px solid var(--border);
-    margin-top: 28px;
+    margin-top: 36px;
   }
   .tab {
-    padding: 10px 16px;
+    padding: 12px 18px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
     cursor: pointer;
     color: var(--text-dim);
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
     user-select: none;
     font-weight: 500;
+    font-size: 13.5px;
+    transition-property: color, transform;
+    transition-duration: 180ms;
+    transition-timing-function: var(--ease);
   }
   .tab:hover { color: var(--text); }
-  .tab.active {
-    color: var(--text);
-    border-bottom-color: var(--accent);
-  }
-  .panel { display: none; padding-top: 24px; }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab:active { transform: scale(0.97); }
+
+  .panel { display: none; padding-top: 28px; }
   .panel.active { display: block; }
 
   /* Cards / sections */
   .card {
     background: var(--bg-elev);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px 18px;
+    border-radius: var(--r-card);
+    padding: 18px 20px;
     margin-bottom: 14px;
+    box-shadow: var(--tint-inset), var(--tint-shadow);
   }
 
-  /* "take" cards (anomalies / highlights) — borrowed from session-report */
-  .takes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+  /* "take" cards (anomalies / highlights) */
+  .takes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
   .take {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 14px;
+    gap: 16px;
     align-items: center;
     background: var(--bg-elev);
     border: 1px solid var(--border);
     border-left: 3px solid var(--border-strong);
-    border-radius: 8px;
-    padding: 12px 14px;
+    border-radius: var(--r-card);
+    padding: 14px 18px;
+    box-shadow: var(--tint-inset), var(--tint-shadow);
   }
-  .take .fig {
-    font-family: var(--mono);
-    font-size: 22px;
-    font-weight: 600;
-    min-width: 72px;
-  }
-  .take .txt { color: var(--text); font-size: 13.5px; line-height: 1.45; }
-  .take.bad { border-left-color: var(--bad); }
-  .take.bad .fig { color: var(--bad); }
-  .take.good { border-left-color: var(--good); }
-  .take.good .fig { color: var(--good); }
-  .take.info { border-left-color: var(--info); }
-  .take.info .fig { color: var(--info); }
-  .take.warn { border-left-color: var(--warn); }
-  .take.warn .fig { color: var(--warn); }
+  .take .fig { font-size: 22px; font-weight: 600; min-width: 76px; letter-spacing: -0.02em; }
+  .take .txt { color: var(--text); font-size: 13.5px; line-height: 1.5; text-wrap: pretty; }
+  .take.bad  { border-left-color: var(--bad); }   .take.bad  .fig { color: var(--bad); }
+  .take.good { border-left-color: var(--good); }  .take.good .fig { color: var(--good); }
+  .take.info { border-left-color: var(--info); }  .take.info .fig { color: var(--info); }
+  .take.warn { border-left-color: var(--warn); }  .take.warn .fig { color: var(--warn); }
 
   /* Tables */
   table.kv { width: 100%; border-collapse: collapse; }
-  table.kv td { padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  table.kv td { padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  table.kv tr:last-child td { border-bottom: none; }
   table.kv td:first-child { color: var(--text-dim); width: 40%; }
-  table.kv td:last-child { font-family: var(--mono); text-align: right; }
+  table.kv td:last-child  { text-align: right; }
 
   table.bars { width: 100%; border-collapse: collapse; font-size: 13px; }
-  table.bars td { padding: 5px 6px; vertical-align: middle; }
-  table.bars td.name { color: var(--text); width: 30%; }
-  table.bars td.count { font-family: var(--mono); color: var(--text-dim); text-align: right; width: 12%; padding-right: 12px; }
-  table.bars td.bar { color: var(--accent); font-family: var(--mono); font-size: 11px; line-height: 1; }
+  table.bars td { padding: 6px 6px; vertical-align: middle; }
+  table.bars td.name  { color: var(--text); width: 32%; }
+  table.bars td.count { color: var(--text-dim); text-align: right; width: 12%; padding-right: 16px; }
+  table.bars td.bar   { color: var(--accent); font-size: 11px; line-height: 1; opacity: 0.85; }
 
   /* Turn timeline */
   .turn {
     display: grid;
     grid-template-columns: 40px 1fr auto;
-    gap: 12px;
-    padding: 10px 12px;
+    gap: 14px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--border);
     align-items: center;
   }
   .turn:last-child { border-bottom: none; }
-  .turn .idx { font-family: var(--mono); color: var(--text-mute); font-size: 12px; }
-  .turn .summary { color: var(--text); }
-  .turn .summary .toolset { color: var(--text-mute); font-size: 11.5px; margin-top: 3px; font-family: var(--mono); }
-  .turn .tokens { font-family: var(--mono); color: var(--text-dim); font-size: 12.5px; }
+  .turn .idx { color: var(--text-mute); font-size: 12px; }
+  .turn .summary { color: var(--text); line-height: 1.5; text-wrap: pretty; }
+  .turn .summary .toolset { color: var(--text-mute); font-size: 11.5px; margin-top: 4px; font-family: var(--mono); }
+  .turn .tokens { color: var(--text-dim); font-size: 12.5px; }
 
   /* Compound (playground) */
   .compound-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 16px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 18px;
   }
-  .candidates-list { max-height: 540px; overflow-y: auto; padding-right: 6px; }
+  .candidates-list {
+    max-height: 620px;
+    overflow-y: auto;
+    padding-right: 8px;
+    /* Subtle scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  .candidates-list::-webkit-scrollbar { width: 8px; }
+  .candidates-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; }
+  .candidates-list::-webkit-scrollbar-track { background: transparent; }
+
   .candidate {
     background: var(--bg-elev);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 14px;
-    margin-bottom: 10px;
+    border-radius: var(--r-card);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    box-shadow: var(--tint-inset), var(--tint-shadow);
+    animation: fadeUp 0.42s var(--ease) backwards;
+    animation-delay: calc(var(--i, 0) * 40ms);
+    transition-property: border-color, background, transform, box-shadow;
+    transition-duration: 200ms;
+    transition-timing-function: var(--ease);
   }
-  .candidate.active { border-color: var(--accent); background: var(--bg-elev2); }
-  .candidate .head { display: flex; align-items: center; gap: 8px; }
-  .candidate .head label { display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; }
-  .candidate .head input { accent-color: var(--accent); width: 14px; height: 14px; }
-  .candidate .name { font-weight: 600; color: var(--text); }
+  .candidate.active {
+    border-color: rgba(111, 177, 201, 0.32);
+    box-shadow: var(--tint-inset), var(--tint-shadow),
+                0 0 0 1px rgba(111, 177, 201, 0.18);
+    background: linear-gradient(180deg, var(--bg-elev) 0%, rgba(111, 177, 201, 0.035) 100%);
+  }
+  .candidate .head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .candidate .head label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    flex: 1;
+    min-width: 0;
+    min-height: 24px;
+  }
+  .candidate .head input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .candidate .name {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .candidate .type {
     font-family: var(--mono);
-    font-size: 10.5px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    padding: 1px 6px;
-    border-radius: 4px;
-    background: var(--bg-elev2);
+    padding: 3px 8px;
+    border-radius: var(--r-chip);
+    background: rgba(255, 255, 255, 0.03);
     color: var(--text-dim);
     border: 1px solid var(--border);
+    flex-shrink: 0;
+    font-weight: 600;
   }
-  .candidate .type.feedback { color: var(--warn); border-color: #5a4a2a; }
-  .candidate .type.project  { color: var(--info); border-color: #2a3d5a; }
-  .candidate .type.reference { color: #b48aff; border-color: #3d2a5a; }
-  .candidate .type.user     { color: var(--good); border-color: #2a5a3d; }
-  /* existing-skill = recommend-install from ecosystem (npx skills add) */
+  .candidate .type.feedback  { color: var(--warn);  border-color: rgba(229, 168, 95, 0.28); background: rgba(229, 168, 95, 0.05); }
+  .candidate .type.project   { color: var(--info);  border-color: rgba(111, 177, 201, 0.28); background: rgba(111, 177, 201, 0.05); }
+  .candidate .type.reference { color: #b48aff;       border-color: rgba(180, 138, 255, 0.28); background: rgba(180, 138, 255, 0.05); }
+  .candidate .type.user      { color: var(--good);  border-color: rgba(95, 184, 136, 0.28); background: rgba(95, 184, 136, 0.05); }
   .candidate .type.existing-skill {
-    color: #7adfa0; border-color: #2f5d40; background: rgba(122, 223, 160, 0.08);
+    color: var(--good); border-color: rgba(95, 184, 136, 0.45);
+    background: rgba(95, 184, 136, 0.08);
   }
-  /* agent-md = edit to CLAUDE.md / AGENTS.md (usually a symlink) */
   .candidate .type.agent-md, .candidate .type.claude-md {
-    color: #ffb3a7; border-color: #5a3a32;
+    color: #ffb3a7; border-color: rgba(255, 179, 167, 0.28); background: rgba(255, 179, 167, 0.05);
   }
-  /* skill-gap = new skill candidate (heaviest sink) */
   .candidate .type.skill-gap {
-    color: #ef9fef; border-color: #5a2a5a;
+    color: #ef9fef; border-color: rgba(239, 159, 239, 0.32); background: rgba(239, 159, 239, 0.05);
   }
-  /* Visual grouping: existing-skill cards float to the top with a stronger
-     left rail so users see "install this instead" before scrolling to
-     skill-gap / memory candidates */
-  .candidate.is-existing-skill { border-left: 3px solid var(--good); }
-  .candidate textarea {
-    margin-top: 8px;
-    width: 100%;
-    min-height: 80px;
-    background: var(--bg);
+  /* existing-skill cards get a green left rail for at-a-glance grouping */
+  .candidate.is-existing-skill {
+    border-left: 3px solid var(--good);
+    padding-left: 18px;
+  }
+
+  /* Read-only markdown body for each candidate (was a textarea — but users
+     don't need to edit; reading comfortably matters more than editing.
+     If they want to tweak wording, they can do it back in chat.) */
+  .candidate .body {
+    margin-top: 12px;
+    padding: 14px 16px;
+    background: var(--bg-inset);
+    border-radius: var(--r-inner);
     border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 10px;
     color: var(--text);
     font-family: var(--mono);
     font-size: 12.5px;
-    resize: vertical;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    text-wrap: pretty;
+  }
+  .candidate .body b, .candidate .body strong { color: var(--text); font-weight: 600; }
+  .candidate .body code { background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .candidate .body em { color: var(--text-dim); font-style: italic; }
+  .candidate .body a { color: var(--accent); }
+  .candidate .body blockquote {
+    margin: 8px 0;
+    padding-left: 12px;
+    border-left: 2px solid var(--border-strong);
+    color: var(--text-dim);
   }
 
   .compound-preview {
     background: var(--bg-elev);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
+    border-radius: var(--r-card);
+    padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    height: 540px;
+    height: 620px;
+    box-shadow: var(--tint-inset), var(--tint-shadow);
   }
   .compound-preview .preview-md {
     flex: 1;
     overflow-y: auto;
     font-family: var(--mono);
     font-size: 12.5px;
-    line-height: 1.55;
-    color: var(--text-dim);
+    line-height: 1.65;
+    color: var(--text);
     white-space: pre-wrap;
     word-break: break-word;
+    text-wrap: pretty;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
   }
   .compound-preview .preview-md.empty { color: var(--text-mute); font-style: italic; font-family: var(--ui); }
 
   .prompt-out {
-    margin-top: 18px;
+    margin-top: 20px;
     background: var(--bg-elev2);
     border: 1px solid var(--border-strong);
-    border-radius: 10px;
-    padding: 14px 16px;
+    border-radius: var(--r-card);
+    padding: 16px 18px;
+    box-shadow: var(--tint-inset), var(--tint-shadow);
   }
   .prompt-out .head {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
   }
-  .prompt-out .head .label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .prompt-out .head .label {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
   .prompt-out textarea {
     width: 100%;
-    min-height: 120px;
-    background: var(--bg);
+    min-height: 140px;
+    background: var(--bg-inset);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
+    border-radius: var(--r-inner);
+    padding: 12px 14px;
     color: var(--text);
     font-family: var(--mono);
     font-size: 12.5px;
+    line-height: 1.6;
     resize: vertical;
+    /* Don't let textarea overflow horizontally */
+    overflow-x: auto;
   }
+
   .copy-btn {
     background: var(--accent);
-    color: #0b0d10;
+    color: var(--accent-fg);
     border: none;
-    padding: 6px 14px;
-    border-radius: 6px;
+    padding: 9px 18px;
+    border-radius: var(--r-btn);
     font-weight: 600;
+    font-size: 13px;
     cursor: pointer;
     font-family: var(--ui);
-    font-size: 12.5px;
+    min-height: 36px;
+    transition-property: filter, transform, background;
+    transition-duration: 180ms;
+    transition-timing-function: var(--ease);
   }
-  .copy-btn:hover { filter: brightness(1.1); }
+  .copy-btn:hover { filter: brightness(1.08); }
+  .copy-btn:active { transform: scale(0.96); }
   .copy-btn.copied { background: var(--good); }
 
   .empty-hint { color: var(--text-mute); font-style: italic; padding: 16px 0; }
@@ -375,9 +507,9 @@
 <section class="panel" id="panel-compound">
   <div class="card">
     <h3>把这次会话沉淀进 memory / docs</h3>
-    <p style="color: var(--text-dim); margin: 4px 0 0; font-size: 13px;">
-      勾选想保留的条目、行内修改措辞，然后复制底部生成的提示词粘回 Claude 或 Codex——
-      Agent 会把条目写进 memory 目录或 CLAUDE.md。
+    <p style="color: var(--text-dim); margin: 6px 0 0; font-size: 13px;">
+      勾选想保留的条目，下方会实时合成 markdown 和「复制回 Claude / Codex」的提示词。
+      措辞如果想改，复制后回到 chat 里改即可。
     </p>
   </div>
 
@@ -452,6 +584,17 @@
       document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
       t.classList.add('active');
       $('#panel-' + t.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- Stagger animation for agent-authored take cards ----------
+  // The anomalies <div class="takes"> children are written by the agent in
+  // step 5c (raw HTML, no JS hook). Add the .stagger class + --i index after
+  // the page loads so they get the same fade-up cascade as candidates.
+  requestAnimationFrame(() => {
+    document.querySelectorAll('#anomalies .take').forEach((el, i) => {
+      el.classList.add('stagger');
+      el.style.setProperty('--i', i);
     });
   });
 
@@ -574,6 +717,44 @@
   };
   state.sort((a, b) => orderIdx(a.type) - orderIdx(b.type));
 
+  // Minimal markdown renderer for read-only candidate bodies. Handles:
+  //   **bold** *italic*, `inline code`, [link](url), > blockquote,
+  //   ``` fenced code, paragraph & line breaks. Anything else passes through
+  //   as escaped text. We don't need full Markdown — bodies are agent-authored
+  //   with a known small vocabulary.
+  function renderInlineMd(s) {
+    let out = escapeHtml(s);
+    // inline code first so other patterns don't run inside it
+    out = out.replace(/`([^`]+)`/g, (_m, c) => `<code>${c}</code>`);
+    // bold then italic (run after escape so the markers survive)
+    out = out.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    // [text](url)
+    out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return out;
+  }
+  function renderMdBody(s) {
+    if (!s) return '';
+    // Handle fenced code blocks first; keep their content literally.
+    const fences = [];
+    s = s.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
+      fences.push(escapeHtml(code));
+      return `FENCE${fences.length - 1}`;
+    });
+    // Now process line by line.
+    const lines = s.split('\n').map(line => {
+      if (/^FENCE\d+$/.test(line)) return line; // restored later
+      if (/^>\s/.test(line)) return `<blockquote>${renderInlineMd(line.replace(/^>\s/, ''))}</blockquote>`;
+      return renderInlineMd(line);
+    });
+    let html = lines.join('\n');
+    // Restore fenced code blocks
+    html = html.replace(/FENCE(\d+)/g, (_m, idx) =>
+      `<pre style="background:rgba(255,255,255,0.05);padding:10px 12px;border-radius:8px;overflow-x:auto;margin:6px 0;"><code>${fences[+idx]}</code></pre>`);
+    return html;
+  }
+
   function renderCandidates() {
     if (!state.length) {
       candidatesList.innerHTML = '<div class="empty-hint">未产出候选条目。Agent 需要填 <code>&lt;script id="candidates"&gt;</code>。</div>';
@@ -582,7 +763,7 @@
     candidatesList.innerHTML = state.map((c, i) => {
       const isExisting = c.type === 'existing-skill';
       return `
-      <div class="candidate ${c.selected ? 'active' : ''} ${isExisting ? 'is-existing-skill' : ''}" data-idx="${i}">
+      <div class="candidate ${c.selected ? 'active' : ''} ${isExisting ? 'is-existing-skill' : ''}" data-idx="${i}" style="--i: ${i};">
         <div class="head">
           <label>
             <input type="checkbox" ${c.selected ? 'checked' : ''} />
@@ -590,7 +771,7 @@
           </label>
           <span class="type ${escapeHtml(c.type)}">${escapeHtml(c.type)}</span>
         </div>
-        <textarea>${escapeHtml(c.body)}</textarea>
+        <div class="body">${renderMdBody(c.body)}</div>
       </div>
     `;
     }).join('');
@@ -600,10 +781,6 @@
       el.querySelector('input').addEventListener('change', (e) => {
         state[idx].selected = e.target.checked;
         el.classList.toggle('active', e.target.checked);
-        updateOutputs();
-      });
-      el.querySelector('textarea').addEventListener('input', (e) => {
-        state[idx].body = e.target.value;
         updateOutputs();
       });
     });
