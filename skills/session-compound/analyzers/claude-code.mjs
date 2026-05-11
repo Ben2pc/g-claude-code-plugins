@@ -358,7 +358,7 @@ function emit(stats, filePath) {
         type: 'repeated_read',
         file: fp,
         count,
-        note: `Read the same file ${count} times`,
+        note: `重复读同一文件 ${count}× — ${fp}`,
       })
     }
   }
@@ -370,7 +370,7 @@ function emit(stats, filePath) {
     wasteSignals.push({
       type: 'low_cache_hit',
       rate: cacheHitRate,
-      note: `Cache hit rate is ${(cacheHitRate * 100).toFixed(1)}% — system prompt or CLAUDE.md may be churning`,
+      note: `Cache 命中率仅 ${(cacheHitRate * 100).toFixed(1)}% — system prompt 或 CLAUDE.md 可能在频繁失效`,
     })
   }
 

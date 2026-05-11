@@ -129,7 +129,7 @@ function newStats() {
     // Newly tracked (from source-code spelunking of RolloutItem + EventMsg):
     compactionCount: 0, // each context_compacted event = 1 auto-compaction
     turnAbortCount: 0, // user interrupted a turn
-    patchApplies: { success: 0, failure: 0 }, // patch_apply_end events
+    patchApplies: { success: 0, failure: 0, failedFiles: [] }, // patch_apply_end events
     mcpToolCallCount: 0,
     customToolCallCount: 0,
     webSearchCount: 0,
@@ -177,10 +177,18 @@ function summarize(text, max = 120) {
 function extractReadPath(cmd) {
   if (!cmd) return null
   const cmdStr = Array.isArray(cmd) ? cmd.join(' ') : String(cmd)
+  // Skip both short/long flags (`-n`, `--lines=50`) AND bare numeric values
+  // that follow flags as a separate token (`head -n 50 foo.txt`). Without
+  // the numeric skip we capture "50" as the path.
   const m = cmdStr.match(
-    /(?:^|[;|&]\s*)\s*(?:cat|head|tail|less|nl|wc|file)\s+(?:-\S+\s+)*['"]?([^\s'"|;>&]+)['"]?/,
+    /(?:^|[;|&]\s*)\s*(?:cat|head|tail|less|nl|wc|file)\s+(?:(?:-\S+|-?\d+)\s+)*['"]?([^\s'"|;>&]+)['"]?/,
   )
-  return m ? m[1] : null
+  if (!m) return null
+  const candidate = m[1]
+  // Reject pure-numeric / pure-flag captures (defensive — should be handled
+  // by the skip group, but flag formats vary).
+  if (/^-?\d+$/.test(candidate) || candidate.startsWith('-')) return null
+  return candidate
 }
 
 // ---------- Main scan ----------
@@ -328,10 +336,13 @@ function handleEventMsg(p, ts, stats, setTurn) {
       const turn = stats.humanTurns[stats.humanTurns.length - 1]
       if (turn) turn.toolCounts['patch_apply'] = (turn.toolCounts['patch_apply'] || 0) + 1
       if (p.success === false) {
+        const files = p.changes ? Object.keys(p.changes) : []
+        stats.patchApplies.failedFiles.push(...files)
         stats.toolFailures.push({
           call_id: p.call_id,
           name: 'patch_apply',
           preview: (p.stderr || p.stdout || '').slice(0, 200),
+          files,
         })
       }
       break
@@ -456,7 +467,8 @@ function emit(stats, filePath) {
     .sort((a, b) => b.tokens - a.tokens)
     .slice(0, 5)
 
-  // Waste signals
+  // Waste signals — embed the specific path / tool / file into `note`
+  // so the rendered row is self-explanatory instead of vague counts.
   const wasteSignals = []
   for (const [fp, c] of Object.entries(stats.fileReads)) {
     if (c >= 3) {
@@ -464,7 +476,7 @@ function emit(stats, filePath) {
         type: 'repeated_read',
         file: fp,
         count: c,
-        note: `重复读同一文件 ${c} 次`,
+        note: `重复读同一文件 ${c}× — ${fp}`,
       })
     }
   }
@@ -497,17 +509,34 @@ function emit(stats, filePath) {
     })
   }
   if (stats.patchApplies.failure > 0) {
+    // Dedupe failed file list, show top 3 + ellipsis.
+    const uniqueFiles = [...new Set(stats.patchApplies.failedFiles)]
+    const filePreview = uniqueFiles.slice(0, 3).join(', ')
+    const more = uniqueFiles.length > 3 ? ` 等 ${uniqueFiles.length} 个文件` : ''
     wasteSignals.push({
       type: 'patch_apply_failure',
       count: stats.patchApplies.failure,
-      note: `apply_patch 失败 ${stats.patchApplies.failure} 次（成功 ${stats.patchApplies.success} 次）`,
+      files: uniqueFiles,
+      note: `apply_patch 失败 ${stats.patchApplies.failure}×（成功 ${stats.patchApplies.success}×）${filePreview ? ` — ${filePreview}${more}` : ''}`,
     })
   }
   if (stats.toolFailures.length > 0) {
+    // Aggregate by tool name so the user sees which tools are actually
+    // blowing up, not just a raw count.
+    const byName = stats.toolFailures.reduce((acc, f) => {
+      acc[f.name || 'unknown'] = (acc[f.name || 'unknown'] || 0) + 1
+      return acc
+    }, {})
+    const breakdown = Object.entries(byName)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([n, c]) => `${n} ×${c}`)
+      .join(', ')
     wasteSignals.push({
       type: 'tool_failures',
       count: stats.toolFailures.length,
-      note: `${stats.toolFailures.length} 次工具调用失败`,
+      breakdown: byName,
+      note: `${stats.toolFailures.length} 次工具调用失败 — ${breakdown}`,
     })
   }
 
