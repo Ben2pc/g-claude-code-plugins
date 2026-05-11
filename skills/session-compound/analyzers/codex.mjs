@@ -104,17 +104,20 @@ function newStats() {
     sessionId: null,
     cwd: null,
     cliVersion: null,
-    model: null,
+    originator: null,
+    model: null, // real model, pulled from turn_context (NOT session_meta.model_provider)
+    modelProvider: null,
+    forkedFromId: null,
     git: null,
     firstTs: null,
     lastTs: null,
     activeMs: 0,
     humanTurns: [], // {ts, text, summary, tokens, reasoningTokens, toolCounts}
     feedbackMoments: [],
-    toolUses: {}, // name -> count
-    fileReads: {}, // detected from exec_command args
-    lastCallByCallId: {}, // call_id -> {name, args}
-    toolFailures: [], // {call_id, name, preview}
+    toolUses: {}, // name -> count (union of function_call.name + event-msg-driven tools)
+    fileReads: {},
+    lastCallByCallId: {},
+    toolFailures: [],
     totalTokenUsage: null,
     modelContextWindow: null,
     taskStarted: false,
@@ -123,6 +126,16 @@ function newStats() {
     lastAgentFinalMessage: null,
     taskDurationMs: null,
     timeToFirstTokenMs: null,
+    // Newly tracked (from source-code spelunking of RolloutItem + EventMsg):
+    compactionCount: 0, // each context_compacted event = 1 auto-compaction
+    turnAbortCount: 0, // user interrupted a turn
+    patchApplies: { success: 0, failure: 0 }, // patch_apply_end events
+    mcpToolCallCount: 0,
+    customToolCallCount: 0,
+    webSearchCount: 0,
+    toolSearchCount: 0,
+    imageGenerationCount: 0,
+    subagents: [], // {agent_type, message_preview, ts}
   }
 }
 
@@ -196,7 +209,9 @@ async function scan(filePath) {
       stats.sessionId = p.id || stats.sessionId
       stats.cwd = p.cwd || stats.cwd
       stats.cliVersion = p.cli_version || stats.cliVersion
-      stats.model = p.model_provider || stats.model
+      stats.originator = p.originator || stats.originator
+      stats.modelProvider = p.model_provider || stats.modelProvider
+      stats.forkedFromId = p.forked_from_id || stats.forkedFromId
       if (p.git) {
         stats.git = {
           branch: p.git.branch || null,
@@ -204,13 +219,20 @@ async function scan(filePath) {
           repo: p.git.repository_url || null,
         }
       }
+    } else if (t === 'turn_context') {
+      // Real model name lives here (per protocol.rs TurnContextItem.model),
+      // not in session_meta. Take the first one we see; later turn_contexts
+      // would only override if the user switched models mid-session.
+      if (!stats.model && p.model) stats.model = p.model
+    } else if (t === 'compacted') {
+      // Auto-compaction marker. We also count via event_msg/context_compacted
+      // below; the two are emitted 1:1, but the rollout-item one carries the
+      // replacement-history summary text. We only count once (in event_msg).
     } else if (t === 'event_msg') {
       handleEventMsg(p, ts, stats, (turn) => (currentTurn = turn))
-      // currentTurn may have changed; we re-capture on next iteration
     } else if (t === 'response_item') {
       handleResponseItem(p, ts, stats, currentTurn)
     }
-    // turn_context: ignored (just metadata)
   }
 
   // Active time
@@ -286,6 +308,41 @@ function handleEventMsg(p, ts, stats, setTurn) {
       stats.timeToFirstTokenMs = p.time_to_first_token_ms || null
       break
     }
+    case 'turn_aborted':
+      stats.turnAbortCount++
+      break
+    case 'context_compacted':
+      stats.compactionCount++
+      break
+    case 'patch_apply_end': {
+      // Authoritative source for code-edit success/failure (more reliable
+      // than regex-matching function_call_output text).
+      if (p.success === false) stats.patchApplies.failure++
+      else stats.patchApplies.success++
+      stats.toolUses['patch_apply'] = (stats.toolUses['patch_apply'] || 0) + 1
+      const turn = stats.humanTurns[stats.humanTurns.length - 1]
+      if (turn) turn.toolCounts['patch_apply'] = (turn.toolCounts['patch_apply'] || 0) + 1
+      if (p.success === false) {
+        stats.toolFailures.push({
+          call_id: p.call_id,
+          name: 'patch_apply',
+          preview: (p.stderr || p.stdout || '').slice(0, 200),
+        })
+      }
+      break
+    }
+    case 'mcp_tool_call_end':
+      stats.mcpToolCallCount++
+      stats.toolUses['mcp_tool_call'] = (stats.toolUses['mcp_tool_call'] || 0) + 1
+      break
+    case 'web_search_end':
+      stats.webSearchCount++
+      stats.toolUses['web_search'] = (stats.toolUses['web_search'] || 0) + 1
+      break
+    case 'image_generation_end':
+      stats.imageGenerationCount++
+      stats.toolUses['image_generation'] = (stats.toolUses['image_generation'] || 0) + 1
+      break
   }
 }
 
@@ -308,17 +365,32 @@ function handleResponseItem(p, ts, stats, currentTurn) {
         const fp = extractReadPath(args.cmd)
         if (fp) stats.fileReads[fp] = (stats.fileReads[fp] || 0) + 1
       }
+      // Sub-agent dispatch (codex has these — earlier note in this file
+      // claiming otherwise was wrong and has been corrected).
+      if (name === 'spawn_agent') {
+        stats.subagents.push({
+          ts,
+          agent_type: args.agent_type || 'unknown',
+          message_preview: summarize(args.message || '', 120),
+          fork_context: args.fork_context ?? null,
+        })
+      }
       break
     }
     case 'function_call_output': {
       const out = p.output
       const outStr = typeof out === 'string' ? out : JSON.stringify(out || '')
+      // Avoid double-counting patch failures (handled by patch_apply_end with
+      // an authoritative `success` field). Skip the regex path when the call
+      // we're tied to looks like a patch.
+      const prev = stats.lastCallByCallId[p.call_id]
+      const isPatch = prev && /apply.?patch|patch_apply/i.test(prev.name)
       if (
+        !isPatch &&
         /Process exited with code [1-9]|Error:|failed\b|patch failed|command not found/i.test(
           outStr,
         )
       ) {
-        const prev = stats.lastCallByCallId[p.call_id]
         stats.toolFailures.push({
           call_id: p.call_id,
           name: prev?.name || 'unknown',
@@ -327,7 +399,27 @@ function handleResponseItem(p, ts, stats, currentTurn) {
       }
       break
     }
-    // 'message' and 'reasoning' duplicate event_msg counterparts — skip.
+    case 'custom_tool_call':
+      stats.customToolCallCount++
+      stats.toolUses['custom_tool_call'] = (stats.toolUses['custom_tool_call'] || 0) + 1
+      if (currentTurn) {
+        currentTurn.toolCounts['custom_tool_call'] =
+          (currentTurn.toolCounts['custom_tool_call'] || 0) + 1
+      }
+      break
+    case 'tool_search_call':
+      stats.toolSearchCount++
+      stats.toolUses['tool_search'] = (stats.toolUses['tool_search'] || 0) + 1
+      if (currentTurn) {
+        currentTurn.toolCounts['tool_search'] =
+          (currentTurn.toolCounts['tool_search'] || 0) + 1
+      }
+      break
+    case 'web_search_call':
+      // Mirror counter; web_search_end (event_msg) is the authoritative count.
+      break
+    // 'message' / 'reasoning' / 'custom_tool_call_output' / 'tool_search_output'
+    // duplicate or are paired outputs — counted via their *_call siblings.
   }
 }
 
@@ -386,8 +478,27 @@ function emit(stats, filePath) {
       note: `Reasoning 占 output 的 ${(reasoningOutputRatio * 100).toFixed(1)}% — 任务可能过难或 prompt 不够清晰`,
     })
   }
-  // (context_window pressure check removed — see analyzer comment above; we
-  // can't tell from total_token_usage whether the live context is near full.)
+  if (stats.compactionCount > 0) {
+    wasteSignals.push({
+      type: 'context_compacted',
+      count: stats.compactionCount,
+      note: `本次会话被自动压缩 ${stats.compactionCount} 次 — cumulative tokens 已不等于 live context`,
+    })
+  }
+  if (stats.turnAbortCount > 0) {
+    wasteSignals.push({
+      type: 'turn_aborted',
+      count: stats.turnAbortCount,
+      note: `${stats.turnAbortCount} 次 turn 被中断`,
+    })
+  }
+  if (stats.patchApplies.failure > 0) {
+    wasteSignals.push({
+      type: 'patch_apply_failure',
+      count: stats.patchApplies.failure,
+      note: `apply_patch 失败 ${stats.patchApplies.failure} 次（成功 ${stats.patchApplies.success} 次）`,
+    })
+  }
   if (stats.toolFailures.length > 0) {
     wasteSignals.push({
       type: 'tool_failures',
@@ -395,6 +506,16 @@ function emit(stats, filePath) {
       note: `${stats.toolFailures.length} 次工具调用失败`,
     })
   }
+
+  // Sub-agents counted by agent_type (mirrors claude-code analyzer's shape)
+  const subagentByType = stats.subagents.reduce((acc, a) => {
+    acc[a.agent_type] = (acc[a.agent_type] || 0) + 1
+    return acc
+  }, {})
+  const subagentList = Object.entries(subagentByType).map(([type, count]) => ({
+    type,
+    count,
+  }))
 
   return {
     cli: 'codex',
@@ -410,7 +531,10 @@ function emit(stats, filePath) {
         stats.firstTs && stats.lastTs ? stats.lastTs - stats.firstTs : 0,
       active_ms: stats.activeMs,
       model: stats.model,
+      model_provider: stats.modelProvider,
       cli_version: stats.cliVersion,
+      originator: stats.originator,
+      forked_from_id: stats.forkedFromId,
       git: stats.git,
     },
     narrative: {
@@ -441,14 +565,24 @@ function emit(stats, filePath) {
       },
       api_calls: null, // codex doesn't make this directly visible
       cache_hit_rate: cacheHitRate,
+      context_window: stats.modelContextWindow,
       context_window_used_pct: contextWindowUsedPct,
       reasoning_output_ratio: reasoningOutputRatio,
       tools: stats.toolUses,
-      subagents: [],
-      skills: [],
+      subagents: subagentList,
+      skills: [], // codex has no skill concept (uses plugins instead)
       expensive_turns: expensiveTurns,
       cache_breaks: [],
       waste_signals: wasteSignals,
+      // Codex-specific extras (claude analyzer doesn't emit these)
+      compaction_count: stats.compactionCount,
+      turn_aborted_count: stats.turnAbortCount,
+      patch_apply: stats.patchApplies,
+      mcp_tool_call_count: stats.mcpToolCallCount,
+      custom_tool_call_count: stats.customToolCallCount,
+      web_search_count: stats.webSearchCount,
+      tool_search_count: stats.toolSearchCount,
+      image_generation_count: stats.imageGenerationCount,
     },
     raw_for_compound: {
       feedback_moments: stats.feedbackMoments,
@@ -456,6 +590,7 @@ function emit(stats, filePath) {
         .filter(([, c]) => c >= 2)
         .map(([file, count]) => ({ file, count })),
       tool_failures: stats.toolFailures,
+      subagents: stats.subagents,
     },
   }
 }
