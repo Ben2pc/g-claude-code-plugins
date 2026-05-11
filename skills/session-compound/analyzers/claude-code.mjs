@@ -102,8 +102,30 @@ function newStats() {
   }
 }
 
-const FEEDBACK_RE =
-  /\b(no|don'?t|stop|wait|actually|nope|incorrect|wrong|instead|change|redo|revise|rewrite)\b|不对|不要|别|停|其实|应该|错了|不是|改成|改下|换成|重新|重写|重做|修改/i
+// Calibrated against ~85 real human messages from 10 sessions (5 claude +
+// 5 codex). The current set lifts recall on common Chinese feedback shapes
+// like 不用 / 要不...吧 / 记得 / 还是...老 / 为什么不. English forms are kept
+// for completeness; this user's transcripts are mostly Chinese, so most
+// recall comes from the Chinese alternation.
+const FEEDBACK_RE = new RegExp(
+  [
+    // English — corrections, redirects, retractions
+    String.raw`\b(no|don'?t|stop|wait|actually|nope|incorrect|wrong|instead|change|redo|revise|rewrite|should|shouldn'?t|remember|forget|nevermind|revert|undo|never\s+mind|hold\s+on)\b`,
+    // Chinese — explicit corrections
+    '不对|不要|别|停|其实|应该|错了|不是|改成|改下|换成|重新|重写|重做|修改',
+    // Chinese — scope constraints (only-do, don't-need)
+    '不用|只要|只需|只能|只用|只做|只看|只关注|只改|只管',
+    // Chinese — appended asks / reminders
+    '记得|别忘|忘了',
+    // Chinese — suggestion-shaped
+    '要不|要么',
+    // Chinese — questioning / challenging
+    '为啥|为什么不|为什么没|为何不|应该不|不该',
+    // Chinese — "还是 X" pattern indicating the prior fix didn't land
+    '还是.{0,8}(老|旧|错|没|不|没改|没修)',
+  ].join('|'),
+  'i',
+)
 
 const IDLE_GAP_MS = 5 * 60 * 1000
 
