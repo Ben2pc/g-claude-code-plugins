@@ -67,18 +67,19 @@ Skills that live outside plugins, under `skills/` at the repo root:
 | [claude-code-agent](./skills/claude-code-agent) | Delegate tasks to an independent Claude Code CLI instance |
 | [codex-agent](./skills/codex-agent) | Delegate tasks to Codex via Codex CLI |
 | [ip-diagnosis](./skills/ip-diagnosis) | Diagnose public IPv4/IPv6, DNS, route, utun, and WebRTC exposure on macOS + Chrome |
-| [test-designer](./skills/test-designer) | Independent-Evaluation test designer for TDD red phase |
-| [parallel-implementation](./skills/parallel-implementation) | Slice planner for parallel multi-subagent code writing |
-| [session-compound](./skills/session-compound) | Compound the current CLI session (Claude Code or Codex) into an interactive HTML report — narrative + token / cache / tool diagnostics + a playground for ticking candidate ecosystem-skill installs / AGENTS.md edits / new-skill gaps to copy back as a prompt |
 
 ```bash
 npx skills add Ben2pc/g-claude-code-plugins --skill claude-code-agent
 npx skills add Ben2pc/g-claude-code-plugins --skill codex-agent
 npx skills add Ben2pc/g-claude-code-plugins --skill ip-diagnosis
-npx skills add Ben2pc/g-claude-code-plugins --skill test-designer
-npx skills add Ben2pc/g-claude-code-plugins --skill parallel-implementation
-npx skills add Ben2pc/g-claude-code-plugins --skill session-compound
 ```
+
+> **Migrated**: `test-designer`, `parallel-implementation`, and `session-compound` now live at [Ben2pc/auriga-cli](https://github.com/Ben2pc/auriga-cli) (their source-of-truth was consolidated with the auriga workflow they support). Install them from there:
+> ```bash
+> npx skills add Ben2pc/auriga-cli --skill test-designer
+> npx skills add Ben2pc/auriga-cli --skill parallel-implementation
+> npx skills add Ben2pc/auriga-cli --skill session-compound
+> ```
 
 ### Feishu / Lark Skills
 
