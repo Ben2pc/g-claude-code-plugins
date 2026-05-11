@@ -1,125 +1,170 @@
 ---
 name: session-compound
-description: Generate a single-file interactive HTML report that recaps the CURRENT CLI session (Claude Code or Codex) — narrative, token / cache / tool health, and a playground-style sheet of candidate memory entries / CLAUDE.md edits / skill gaps you can review, edit, and copy back as a prompt. Use after a substantive session when the user wants to compound what they just learned.
+description: 把当前 CLI 会话（Claude Code 或 Codex）复盘成一份单文件交互 HTML 报告——叙事、token / cache / 工具健康度，以及 playground 风格的「可勾选候选条目」面板（候选 memory / CLAUDE.md 增补 / skill 缺口），勾选后一键复制成提示词粘回 Claude / Codex 直接落库。适用于一段实质性工作之后，用户想沉淀这次会话。
 ---
 
 # Session Compound
 
-Compound a single CLI session into a self-contained HTML report saved in the current working directory. The report has three tabs: **Narrative** (what happened), **Health** (token / cache / tool diagnostics), and **Compound** (a playground that lets the user check off candidate memory / CLAUDE.md / skill-gap entries and copy a ready-to-paste prompt back into Claude / Codex).
+把单次 CLI 会话压缩成一份保存在当前目录下、可离线打开的 HTML 报告。报告分三个 tab：
 
-## When to use
+- **Narrative** — 这次做了什么（时间线 + 关键反馈时刻 + Agent 撰写的叙事摘要）
+- **Health** — token / cache / 工具用量诊断
+- **Compound** — playground：左侧候选条目列表（可勾选 + 行内编辑），右侧实时合成 markdown，底部一键复制「提示词」，粘回 Claude / Codex 让 agent 按规则落库
 
-- The user asks to "compound", "recap", "review", or "wrap up" the current session.
-- The user explicitly invokes `/session-compound` or asks for "this session's report".
-- The user wants to extract memory entries, CLAUDE.md edits, or skill ideas from what just happened.
+## 何时使用
 
-Do **not** use for cross-session analytics — that is what the `session-report` plugin is for (last 7 days across all projects).
+- 用户要求「复盘 / 总结 / 沉淀 / wrap up」当前会话
+- 用户显式调用 `/session-compound` 或类似命令
+- 用户想从这次会话里提取 memory 条目、CLAUDE.md 增补、或可抽象的 skill 缺口
 
-## Steps
+**不要**用于跨会话分析——那是 `session-report` 插件的范围（最近 7 天 × 全部项目）。
 
-### 1. Pick the CLI
+---
 
-Detect which CLI's session to analyze. Default order:
+## 工作流
 
-1. If the user passes `--cli claude-code` or `--cli codex`, use it.
-2. Else if `$CLAUDE_CODE_SESSION_ID` is set in the environment (you are running inside Claude Code), use **claude-code**.
-3. Else if `~/.codex/state_5.sqlite` exists, use **codex**.
-4. Else fail with a clear message.
+### 步骤 1：跑 analyzer
 
-### 2. Run the matching analyzer
+你自己知道你是 Claude Code 还是 Codex。**根据你的身份**，从两组指令里选一组执行。
 
-The analyzers live next to this SKILL.md in `analyzers/`. Resolve the absolute path of the skill directory (the dir containing this file) and run the right one:
+#### 如果你是 Claude Code
 
 ```sh
-# Claude Code (auto-locates current session via CLAUDE_CODE_SESSION_ID + cwd slug)
 node <skill-dir>/analyzers/claude-code.mjs > /tmp/session-compound.json
+```
 
-# Codex (auto-locates most recently active thread from ~/.codex/state_5.sqlite)
+`<skill-dir>` 是这份 SKILL.md 所在目录的绝对路径。
+
+脚本会自动通过 `CLAUDE_CODE_SESSION_ID` 环境变量 + 当前 cwd 推断出 `~/.claude/projects/<cwd-slug>/<session-id>.jsonl`。可选 override：
+- `--session-id <uuid>` — 指定会话 id
+- `--file <abs-path>` — 直接指定 JSONL 文件路径
+
+#### 如果你是 Codex
+
+```sh
 node <skill-dir>/analyzers/codex.mjs > /tmp/session-compound.json
 ```
 
-Both analyzers accept these overrides:
-- `--session-id <id>` — pin to a specific session
-- `--file <abs-path>` — point directly at a JSONL file
+脚本会从 `CODEX_THREAD_ID` 环境变量读 thread id，然后在 `~/.codex/sessions/**/rollout-*-<thread-id>.jsonl` 下定位文件。可选 override：
+- `--thread-id <uuid>` — 指定 thread id
+- `--file <abs-path>` — 直接指定 rollout JSONL 文件路径
 
-If the analyzer exits non-zero, read its stderr, fix the obvious cause (wrong cli, missing env var, no session yet), and re-run. Do NOT proceed past this step without a JSON file.
+#### 通用约束
 
-### 3. Read the JSON
+如果 analyzer 非零退出，读 stderr、对症修正（错路径、缺会话、文件未生成等）后重跑。**未拿到 JSON 不要继续后续步骤**。
 
-Read `/tmp/session-compound.json`. Skim: `session`, `narrative.human_turns`, `narrative.feedback_moments`, `health.tokens`, `health.tools`, `health.expensive_turns`, `health.waste_signals`, `raw_for_compound`. The output schema is the same for both analyzers — only the `cli` field and a few CLI-specific fields (`reasoning_output`, `context_window_used_pct`) differ.
+### 步骤 2：读 JSON 摘要
 
-### 4. Copy the template
+读 `/tmp/session-compound.json`。重点扫这些字段：
+
+- `session` — id / cwd / 时长 / 模型 / git
+- `narrative.human_turns` — 用户每个 turn 的摘要 + token + 触发的工具
+- `narrative.feedback_moments` — 检测到的用户纠正/反馈瞬间
+- `health.tokens` / `health.cache_hit_rate` / `health.context_window_used_pct`
+- `health.tools` / `health.subagents` / `health.skills`（Codex 后两项通常为空）
+- `health.expensive_turns` — token 消耗最高的 turn
+- `health.waste_signals` — 重复读同文件、低 cache 命中等浪费信号
+- `raw_for_compound` — 用来写候选条目的原材料
+
+两套 analyzer 的输出 schema 完全一致，差异只在 `cli` 字段和少数 CLI-specific 字段（如 `reasoning_output`、`context_window_used_pct`）。
+
+### 步骤 3：复制模板到输出文件
 
 ```sh
 cp <skill-dir>/template.html ./session-compound-$(date +%Y%m%d-%H%M).html
 ```
 
-### 5. Inject data + author the Agent-filled sections
+### 步骤 4：注入数据 + 撰写 Agent 填空段（**用 Edit，不用 Write**——必须保留模板的 JS/CSS）
 
-Use **Edit** (not Write — preserve the template's JS/CSS) to make four changes to the output file:
+需要做 4 处编辑：
 
-#### 5a. Replace the report-data JSON
+#### 4a. 替换 `<script id="report-data">` 的内容
 
-Find this block:
+把这块的内容替换成步骤 1 产出的完整 JSON：
+
 ```html
 <script id="report-data" type="application/json">
 { "cli": "claude-code", ... }
 </script>
 ```
-Replace its contents with the full JSON from step 3. The template renders the hero, all tables, bars, and timelines from this blob automatically.
 
-#### 5b. Fill `<!-- AGENT: narrative-summary -->`
+模板的 JS 会自动从这个 JSON 渲染 hero、所有表格、bar、时间线。
 
-Replace the `<div id="narrative-summary" class="empty-hint">...</div>` with a plain `<div id="narrative-summary">` containing **≤3 sentences** telling the story of this session. Reference real human turns, real decisions, real tool patterns from the data — not generic platitudes.
+#### 4b. 填 `<!-- AGENT: narrative-summary -->` 块
 
-#### 5c. Fill `<!-- AGENT: anomalies -->`
-
-Replace the `<div class="takes" id="anomalies">...</div>` contents with **3–5 take cards**. Express figures as a % of total tokens wherever possible. Exact markup:
-
+把这个 div：
 ```html
-<div class="take bad"><div class="fig">62%</div><div class="txt">Turn <b>#4</b> alone consumed 62% of total tokens — one prompt drove the entire run</div></div>
+<div id="narrative-summary" class="empty-hint">No summary yet — ...</div>
+```
+替换为：
+```html
+<div id="narrative-summary">这里写 ≤3 句话的会话叙事摘要</div>
 ```
 
-Classes: `.take.bad` (waste / red), `.take.good` (healthy / green), `.take.warn` (caution / amber), `.take.info` (neutral / blue). The `.fig` is one short number (%, count, or `12×` multiplier). The `.txt` is one plain sentence with the subject wrapped in `<b>`.
+摘要要求：**事实性**。引用真实的 turn 内容、真实的决策、真实的工具模式——不要套话。
 
-Look for: a turn eating a disproportionate share; cache hit rate < 85% (claude) or low reasoning ratio (codex); repeated reads of the same file; subagent calls without an output-format contract; long uninterrupted runs; context window approaching limit (codex).
+#### 4c. 填 `<!-- AGENT: anomalies -->` 块
 
-#### 5d. Fill `<script id="candidates">` with structured compound candidates
+把 `<div class="takes" id="anomalies">...</div>` 内的占位 hint 替换为 **3–5 张 take 卡片**。数值尽量用「占总 token 的 %」表达。精确 markup：
 
-This is the highest-leverage step. Replace the `[]` inside that script tag with an array of candidate objects. Each candidate is one entry the user might want to keep — a memory, a CLAUDE.md edit, or a skill gap.
+```html
+<div class="take bad"><div class="fig">62%</div><div class="txt">Turn <b>#4</b> 一个 prompt 消耗了 62% 的总 token</div></div>
+```
 
-Schema:
+class 含义：
+- `.take.bad` — 浪费 / 红
+- `.take.good` — 健康信号 / 绿
+- `.take.warn` — 警示 / 黄
+- `.take.info` — 中性事实 / 蓝
+
+`.fig` 是一个短数字（%、计数、或 `12×` 倍数）。`.txt` 是一句白话，主语用 `<b>` 包起来。
+
+可发掘的角度：
+- 单个 turn 占了不成比例的份额
+- Cache hit < 85%（Claude）或 reasoning 占 output > 50%（Codex）
+- 反复读同一个文件
+- 子 agent 调用没有输出格式约束
+- Context window 接近上限（Codex）
+
+#### 4d. 填 `<script id="candidates">` 数组（**本 skill 的核心价值**）
+
+把那个 script tag 里的 `[]` 替换为候选条目数组。每个条目是用户可能想保留的一项：memory 条目、CLAUDE.md 增补、或 skill 缺口。
+
+Schema：
 ```json
 [
   {
     "name": "kebab-case-name",
     "type": "feedback | project | reference | user | claude-md | skill-gap",
-    "body": "markdown body of the entry — the actual text to save",
+    "body": "条目正文 markdown——直接落库的文本",
     "default_selected": true
   }
 ]
 ```
 
-Type semantics:
-- **`feedback`** — corrections / preferences the user gave you. Body: lead with the rule, then `**Why:**` and `**How to apply:**` lines (per the global auto-memory convention).
-- **`project`** — facts about ongoing work, deadlines, stakeholders, decisions. Body: same `**Why:** / **How to apply:**` structure.
-- **`reference`** — pointers to external systems (Linear projects, Grafana boards, Slack channels).
-- **`user`** — facts about who the user is, their role, expertise, preferences.
-- **`claude-md`** — a specific addition or edit to a `CLAUDE.md` file. Body: state which file and the exact lines to add / change.
-- **`skill-gap`** — a repeated pattern that could be abstracted into a new skill. Body: describe the gap and what a skill would do.
+type 语义（遵循全局 auto-memory 规范）：
 
-**Source material** comes from `raw_for_compound` in the JSON: feedback moments, repeated reads, subagent invocations, the turn timeline. Use the actual user words from `narrative.feedback_moments` to write `feedback` entries. Use `human_turns` summaries to derive `project` entries.
+- **`feedback`** — 用户对你给的纠正 / 偏好。正文结构：先写规则，再写 `**Why:**` 和 `**How to apply:**` 两行
+- **`project`** — 关于在做的项目的事实（截止日期、相关人、决策）。正文同 feedback 结构
+- **`reference`** — 外部系统的指针（Linear 项目、Grafana 看板、Slack 频道）
+- **`user`** — 关于用户本人的角色 / 专长 / 偏好
+- **`claude-md`** — 对某个 `CLAUDE.md` 的具体修改。正文：哪个文件 + 准确插入或修改的内容
+- **`skill-gap`** — 这次会话里出现了重复模式，可以抽象成新 skill。正文：描述这个缺口 + 一个 skill 应该做什么
 
-**Quality bar:** be selective. 3–8 high-signal candidates beats 20 mediocre ones. Skip the obvious; only include what would be useful in a *future* session.
+**原材料**来自 JSON 的 `raw_for_compound`：feedback 瞬间、重复读文件、子 agent 调用、turn 时间线。`feedback` 类条目用 `narrative.feedback_moments` 里的原话当起点。`project` 类条目从 `human_turns` 提炼。
 
-### 6. Report the saved file path to the user
+**质量标准**：宁少勿滥。**3–8 条高价值候选** 胜过 20 条平庸候选。明显的别写——只保留**未来某次会话**会真正用到的。
 
-Don't open the file. Don't render it. Just print the absolute path. The user opens it themselves, ticks candidates in the Compound tab, edits any wording, and clicks Copy to bring the result back into Claude / Codex.
+### 步骤 5：报告输出路径
 
-## Notes
+把保存的绝对路径报告给用户。**不要**打开它、**不要**预渲染。用户自己打开、在 Compound tab 勾选、行内编辑措辞、点 Copy，把生成的提示词粘回 Claude / Codex 那一句话就完成落库。
 
-- The template's JS reads two blocks: `<script id="report-data">` (analyzer output) and `<script id="candidates">` (your authored candidates). The rest of the page renders from those two blobs. Don't restructure the HTML.
-- The Compound tab is the unique value of this skill versus a regular session report — it's a playground that turns "AI extracts candidates → human reviews → entries land in memory" into one frictionless flow.
-- Codex sessions have no native subagent / skill concept. The template hides those sections automatically when `data.cli === 'codex'`.
-- If `raw_for_compound` is sparse (short session, no feedback moments), produce 1–3 high-quality `skill-gap` candidates instead of forcing 5 mediocre ones.
-- If the JSON is large (>2MB), truncate `narrative.human_turns` and `health.expensive_turns` to the top 50 before embedding — they should already be capped, but check.
+---
+
+## 备注
+
+- 模板 JS 只读两个 script block：`<script id="report-data">`（analyzer 输出）和 `<script id="candidates">`（你撰写的候选）。其余渲染都靠这两个 blob 驱动。**不要改 HTML 结构**。
+- Compound tab 是这个 skill 区别于普通 session report 的核心价值——把「AI 提取候选 → 人审核 → 落入 memory」做成了无摩擦闭环。
+- Codex 会话没有原生 subagent / skill 概念，模板会根据 `data.cli === 'codex'` 自动隐藏对应表格。
+- 如果 `raw_for_compound` 很稀（会话短、没反馈瞬间），宁可产出 1–3 条高质量 `skill-gap`，也不要硬凑 5 条。
+- 如果 JSON 超过 2MB，截断 `narrative.human_turns` 和 `health.expensive_turns` 到前 50 条再嵌入（analyzer 通常已经控制了，但要检查）。
