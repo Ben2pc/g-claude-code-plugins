@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Session Compound — REPORT_TITLE</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --bg-elev: #14171c;
+    --bg-elev2: #1b1f26;
+    --border: #2a2f37;
+    --border-strong: #3a4150;
+    --text: #e6e9ee;
+    --text-dim: #9aa3b2;
+    --text-mute: #6b7280;
+    --accent: #7aa7ff;
+    --good: #58c995;
+    --warn: #f0b86e;
+    --bad: #ef6f6f;
+    --info: #7aa7ff;
+    --mono: ui-monospace, SFMono-Regular, Menlo, "JetBrains Mono", Consolas, monospace;
+    --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--text); margin: 0; }
+  body { font: 14px/1.5 var(--ui); padding: 32px 28px 80px; max-width: 1280px; margin: 0 auto; }
+  h1, h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 32px 0 12px; color: var(--text); }
+  h3 { font-size: 14px; margin: 18px 0 8px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  code, .mono { font-family: var(--mono); font-size: 12.5px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Hero */
+  .hero {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+  }
+  .hero .meta { color: var(--text-dim); font-size: 13px; margin-top: 6px; }
+  .hero .meta .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    margin-right: 6px;
+    background: var(--bg-elev2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 11.5px;
+    color: var(--text-dim);
+  }
+  .hero .pill.cli-claude-code { color: #c4a4ff; border-color: #4d3d80; }
+  .hero .pill.cli-codex { color: #7adfa0; border-color: #2f5d40; }
+  .hero .total {
+    text-align: right;
+  }
+  .hero .total .num {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .hero .total .lbl { color: var(--text-mute); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-top: 28px;
+  }
+  .tab {
+    padding: 10px 16px;
+    cursor: pointer;
+    color: var(--text-dim);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    user-select: none;
+    font-weight: 500;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+  .panel { display: none; padding-top: 24px; }
+  .panel.active { display: block; }
+
+  /* Cards / sections */
+  .card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+
+  /* "take" cards (anomalies / highlights) — borrowed from session-report */
+  .takes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+  .take {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: center;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .take .fig {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    min-width: 72px;
+  }
+  .take .txt { color: var(--text); font-size: 13.5px; line-height: 1.45; }
+  .take.bad { border-left-color: var(--bad); }
+  .take.bad .fig { color: var(--bad); }
+  .take.good { border-left-color: var(--good); }
+  .take.good .fig { color: var(--good); }
+  .take.info { border-left-color: var(--info); }
+  .take.info .fig { color: var(--info); }
+  .take.warn { border-left-color: var(--warn); }
+  .take.warn .fig { color: var(--warn); }
+
+  /* Tables */
+  table.kv { width: 100%; border-collapse: collapse; }
+  table.kv td { padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  table.kv td:first-child { color: var(--text-dim); width: 40%; }
+  table.kv td:last-child { font-family: var(--mono); text-align: right; }
+
+  table.bars { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.bars td { padding: 5px 6px; vertical-align: middle; }
+  table.bars td.name { color: var(--text); width: 30%; }
+  table.bars td.count { font-family: var(--mono); color: var(--text-dim); text-align: right; width: 12%; padding-right: 12px; }
+  table.bars td.bar { color: var(--accent); font-family: var(--mono); font-size: 11px; line-height: 1; }
+
+  /* Turn timeline */
+  .turn {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+  .turn:last-child { border-bottom: none; }
+  .turn .idx { font-family: var(--mono); color: var(--text-mute); font-size: 12px; }
+  .turn .summary { color: var(--text); }
+  .turn .summary .toolset { color: var(--text-mute); font-size: 11.5px; margin-top: 3px; font-family: var(--mono); }
+  .turn .tokens { font-family: var(--mono); color: var(--text-dim); font-size: 12.5px; }
+
+  /* Compound (playground) */
+  .compound-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+  .candidates-list { max-height: 540px; overflow-y: auto; padding-right: 6px; }
+  .candidate {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .candidate.active { border-color: var(--accent); background: var(--bg-elev2); }
+  .candidate .head { display: flex; align-items: center; gap: 8px; }
+  .candidate .head label { display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; }
+  .candidate .head input { accent-color: var(--accent); width: 14px; height: 14px; }
+  .candidate .name { font-weight: 600; color: var(--text); }
+  .candidate .type {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--bg-elev2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .candidate .type.feedback { color: var(--warn); border-color: #5a4a2a; }
+  .candidate .type.project  { color: var(--info); border-color: #2a3d5a; }
+  .candidate .type.reference { color: #b48aff; border-color: #3d2a5a; }
+  .candidate .type.user     { color: var(--good); border-color: #2a5a3d; }
+  .candidate .type.skill-gap, .candidate .type.claude-md {
+    color: #ef9fef; border-color: #5a2a5a;
+  }
+  .candidate textarea {
+    margin-top: 8px;
+    width: 100%;
+    min-height: 80px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    resize: vertical;
+  }
+
+  .compound-preview {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    height: 540px;
+  }
+  .compound-preview .preview-md {
+    flex: 1;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .compound-preview .preview-md.empty { color: var(--text-mute); font-style: italic; font-family: var(--ui); }
+
+  .prompt-out {
+    margin-top: 18px;
+    background: var(--bg-elev2);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .prompt-out .head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .prompt-out .head .label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .prompt-out textarea {
+    width: 100%;
+    min-height: 120px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    resize: vertical;
+  }
+  .copy-btn {
+    background: var(--accent);
+    color: #0b0d10;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--ui);
+    font-size: 12.5px;
+  }
+  .copy-btn:hover { filter: brightness(1.1); }
+  .copy-btn.copied { background: var(--good); }
+
+  .empty-hint { color: var(--text-mute); font-style: italic; padding: 16px 0; }
+
+  /* CLI-conditional sections */
+  body[data-cli="codex"] .only-claude { display: none; }
+  body[data-cli="claude-code"] .only-codex { display: none; }
+</style>
+</head>
+<body>
+
+<!-- All analyzer output goes here. JS reads this and renders everything. -->
+<script id="report-data" type="application/json">
+{ "cli": "claude-code", "session": {}, "narrative": {}, "health": {}, "raw_for_compound": {} }
+</script>
+
+<!-- Agent-authored compound candidates (one array of items). Schema:
+     [{ "name": "...", "type": "feedback|project|reference|user|claude-md|skill-gap",
+        "body": "markdown body", "default_selected": true|false }] -->
+<script id="candidates" type="application/json">
+[]
+</script>
+
+<div class="hero">
+  <div>
+    <h1 id="report-title">Session Compound</h1>
+    <div class="meta" id="hero-meta"></div>
+  </div>
+  <div class="total">
+    <div class="num" id="total-tokens">—</div>
+    <div class="lbl">Total tokens</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="narrative">Narrative</div>
+  <div class="tab" data-tab="health">Health</div>
+  <div class="tab" data-tab="compound">Compound</div>
+</div>
+
+<!-- ============ TAB 1: NARRATIVE ============ -->
+<section class="panel active" id="panel-narrative">
+  <div class="card">
+    <h3>Session summary</h3>
+    <!-- AGENT: narrative-summary
+         Write ≤3 sentences telling the story of this session: what the user
+         set out to do, what was actually done, the key turning point. Keep
+         it factual; reference real human turns and tool patterns from the
+         data, not generic platitudes.
+    -->
+    <div id="narrative-summary" class="empty-hint">No summary yet — Agent should fill the <code>&lt;!-- AGENT: narrative-summary --&gt;</code> block.</div>
+  </div>
+
+  <h2>Timeline</h2>
+  <div class="card" id="turns-list"></div>
+
+  <h2>Feedback moments</h2>
+  <div class="card" id="feedback-list"></div>
+</section>
+
+<!-- ============ TAB 2: HEALTH ============ -->
+<section class="panel" id="panel-health">
+  <div class="card">
+    <h3>Anomalies & highlights</h3>
+    <!-- AGENT: anomalies
+         Fill with 3-5 take cards. Express figures as % of total tokens
+         wherever possible. Classes: .take.bad (waste), .take.good (healthy),
+         .take.warn (caution), .take.info (neutral fact). The .fig is one
+         short number; .txt is one plain sentence with the subject wrapped
+         in <b>. Example shape:
+         <div class="take bad"><div class="fig">62%</div><div class="txt">Turn <b>#4</b> alone consumed 62% of total tokens</div></div>
+    -->
+    <div class="takes" id="anomalies">
+      <div class="empty-hint">No anomalies yet — Agent should fill the <code>&lt;!-- AGENT: anomalies --&gt;</code> block.</div>
+    </div>
+  </div>
+
+  <h2>Tokens</h2>
+  <div class="card"><table class="kv" id="token-table"></table></div>
+
+  <h2>Tools used</h2>
+  <div class="card"><table class="bars" id="tools-table"></table></div>
+
+  <h2 class="only-claude">Subagents</h2>
+  <div class="card only-claude"><table class="bars" id="subagents-table"></table></div>
+
+  <h2 class="only-claude">Skills triggered</h2>
+  <div class="card only-claude"><table class="bars" id="skills-table"></table></div>
+
+  <h2>Most expensive turns</h2>
+  <div class="card" id="expensive-turns"></div>
+
+  <h2>Waste signals</h2>
+  <div class="card" id="waste-signals"></div>
+</section>
+
+<!-- ============ TAB 3: COMPOUND (playground) ============ -->
+<section class="panel" id="panel-compound">
+  <div class="card">
+    <h3>Compound this session into memory / docs</h3>
+    <p style="color: var(--text-dim); margin: 4px 0 0; font-size: 13px;">
+      Tick the items you want to keep, edit them inline, then copy the prompt
+      at the bottom and paste it into your next Claude or Codex turn — it'll
+      drop the entries into your memory / CLAUDE.md.
+    </p>
+  </div>
+
+  <div class="compound-grid">
+    <div>
+      <h3>Candidates</h3>
+      <div class="candidates-list" id="candidates-list"></div>
+    </div>
+    <div>
+      <h3>Live preview</h3>
+      <div class="compound-preview">
+        <div id="compound-preview-md" class="preview-md empty">Select candidates on the left to see the composed markdown here.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prompt-out">
+    <div class="head">
+      <div class="label">Copy back into Claude / Codex</div>
+      <button class="copy-btn" id="copy-btn">Copy</button>
+    </div>
+    <textarea id="prompt-textarea" readonly></textarea>
+  </div>
+</section>
+
+<script>
+(function () {
+  const data = JSON.parse(document.getElementById('report-data').textContent);
+  const candidates = JSON.parse(document.getElementById('candidates').textContent);
+
+  // ---------- Helpers ----------
+  const $ = (sel) => document.querySelector(sel);
+  const fmtN = (n) => (n == null ? '—' : n.toLocaleString());
+  const fmtPct = (n) => (n == null ? '—' : (n * 100).toFixed(1) + '%');
+  const fmtDur = (ms) => {
+    if (!ms) return '—';
+    const s = Math.round(ms / 1000);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return h ? `${h}h ${m}m` : m ? `${m}m ${sec}s` : `${sec}s`;
+  };
+  const fmtTime = (iso) => iso ? new Date(iso).toLocaleString() : '—';
+  const block = (n, max, width = 20) => {
+    if (!max) return '';
+    const filled = Math.round((n / max) * width);
+    return '█'.repeat(filled) + '░'.repeat(width - filled);
+  };
+
+  // ---------- Body data-cli ----------
+  document.body.setAttribute('data-cli', data.cli || 'claude-code');
+
+  // ---------- Hero ----------
+  const s = data.session || {};
+  const h = data.health || {};
+  const title = (data.narrative?.human_turns?.[0]?.summary) || 'Session';
+  document.title = `Session Compound — ${title.slice(0, 60)}`;
+  $('#report-title').textContent = title.length > 80 ? title.slice(0, 79) + '…' : title;
+
+  const pills = [];
+  pills.push(`<span class="pill cli-${data.cli}">${data.cli}</span>`);
+  if (s.model) pills.push(`<span class="pill">${s.model}</span>`);
+  if (s.git?.branch) pills.push(`<span class="pill">${s.git.branch}</span>`);
+  if (s.cwd) pills.push(`<span class="pill">${s.cwd.replace(/^.*\//, '')}</span>`);
+  const dur = `<span class="pill">${fmtDur(s.duration_ms)} wall · ${fmtDur(s.active_ms)} active</span>`;
+  const turns = `<span class="pill">${data.narrative?.human_turn_count ?? '?'} turns</span>`;
+  $('#hero-meta').innerHTML = pills.join(' ') + ' ' + dur + ' ' + turns + ` <span class="pill">${fmtTime(s.started_at)}</span>`;
+  $('#total-tokens').textContent = fmtN(h.tokens?.total);
+
+  // ---------- Tab switching ----------
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      $('#panel-' + t.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- Narrative: timeline ----------
+  const turnsList = $('#turns-list');
+  const humanTurns = data.narrative?.human_turns || [];
+  if (!humanTurns.length) {
+    turnsList.innerHTML = '<div class="empty-hint">No human turns detected.</div>';
+  } else {
+    turnsList.innerHTML = humanTurns.map((t, i) => {
+      const tools = Object.entries(t.tool_counts || {})
+        .sort((a, b) => b[1] - a[1])
+        .map(([n, c]) => `${n}×${c}`).join(' · ');
+      return `<div class="turn">
+        <div class="idx">#${i}</div>
+        <div class="summary">
+          <div>${escapeHtml(t.summary)}</div>
+          ${tools ? `<div class="toolset">${tools}</div>` : ''}
+        </div>
+        <div class="tokens">${fmtN(t.tokens)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ---------- Narrative: feedback ----------
+  const fbList = $('#feedback-list');
+  const fb = data.narrative?.feedback_moments || [];
+  if (!fb.length) {
+    fbList.innerHTML = '<div class="empty-hint">No feedback / correction moments detected.</div>';
+  } else {
+    fbList.innerHTML = fb.map(f => `<div class="turn">
+      <div class="idx">!</div>
+      <div class="summary">${escapeHtml(f.text)}</div>
+      <div class="tokens">${fmtTime(new Date(f.ts).toISOString())}</div>
+    </div>`).join('');
+  }
+
+  // ---------- Health: tokens table ----------
+  const tk = h.tokens || {};
+  const rows = [
+    ['Input (uncached)', fmtN(tk.input_uncached)],
+    ['Cache create', fmtN(tk.cache_create)],
+    ['Cache read', fmtN(tk.cache_read)],
+    ['Output', fmtN(tk.output)],
+  ];
+  if (data.cli === 'codex' && tk.reasoning_output != null) {
+    rows.push(['Reasoning output', fmtN(tk.reasoning_output)]);
+  }
+  rows.push(['<b>Total</b>', `<b>${fmtN(tk.total)}</b>`]);
+  rows.push(['API calls', fmtN(h.api_calls)]);
+  rows.push(['Cache hit rate', fmtPct(h.cache_hit_rate)]);
+  if (h.context_window_used_pct != null) {
+    rows.push(['Context window used', fmtPct(h.context_window_used_pct)]);
+  }
+  $('#token-table').innerHTML = rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+
+  // ---------- Health: tools / subagents / skills bars ----------
+  function renderBars(target, obj) {
+    const entries = Array.isArray(obj)
+      ? obj.map(x => [x.name || x.type, x.count])
+      : Object.entries(obj || {});
+    if (!entries.length) {
+      $(target).innerHTML = '<tr><td class="name" style="color: var(--text-mute); font-style: italic;">none</td></tr>';
+      return;
+    }
+    const max = Math.max(...entries.map(([, c]) => c));
+    const sorted = entries.sort((a, b) => b[1] - a[1]);
+    $(target).innerHTML = sorted.map(([name, count]) => `<tr>
+      <td class="name">${escapeHtml(String(name))}</td>
+      <td class="count">${count}</td>
+      <td class="bar">${block(count, max, 30)}</td>
+    </tr>`).join('');
+  }
+  renderBars('#tools-table', h.tools);
+  renderBars('#subagents-table', h.subagents);
+  renderBars('#skills-table', h.skills);
+
+  // ---------- Health: expensive turns ----------
+  const expensive = h.expensive_turns || [];
+  $('#expensive-turns').innerHTML = expensive.length
+    ? expensive.map(t => `<div class="turn">
+        <div class="idx">$</div>
+        <div class="summary">${escapeHtml(t.summary)}</div>
+        <div class="tokens">${fmtN(t.tokens)}</div>
+      </div>`).join('')
+    : '<div class="empty-hint">No turns recorded.</div>';
+
+  // ---------- Health: waste signals ----------
+  const waste = h.waste_signals || [];
+  $('#waste-signals').innerHTML = waste.length
+    ? waste.map(w => `<div class="turn">
+        <div class="idx">⚠</div>
+        <div class="summary">${escapeHtml(w.note || JSON.stringify(w))}</div>
+        <div class="tokens">${escapeHtml(w.type || '')}</div>
+      </div>`).join('')
+    : '<div class="empty-hint">No waste signals detected. 🎉</div>';
+
+  // ---------- Compound: candidates ----------
+  const candidatesList = $('#candidates-list');
+  const previewEl = $('#compound-preview-md');
+  const promptEl = $('#prompt-textarea');
+  const copyBtn = $('#copy-btn');
+
+  // Internal state for compound tab
+  const state = candidates.map((c, i) => ({
+    idx: i,
+    selected: c.default_selected !== false,
+    name: c.name || `candidate-${i}`,
+    type: c.type || 'project',
+    body: c.body || '',
+  }));
+
+  function renderCandidates() {
+    if (!state.length) {
+      candidatesList.innerHTML = '<div class="empty-hint">No candidates produced. Agent should fill <code>&lt;script id="candidates"&gt;</code>.</div>';
+      return;
+    }
+    candidatesList.innerHTML = state.map((c, i) => `
+      <div class="candidate ${c.selected ? 'active' : ''}" data-idx="${i}">
+        <div class="head">
+          <label>
+            <input type="checkbox" ${c.selected ? 'checked' : ''} />
+            <span class="name">${escapeHtml(c.name)}</span>
+          </label>
+          <span class="type ${escapeHtml(c.type)}">${escapeHtml(c.type)}</span>
+        </div>
+        <textarea>${escapeHtml(c.body)}</textarea>
+      </div>
+    `).join('');
+
+    candidatesList.querySelectorAll('.candidate').forEach(el => {
+      const idx = +el.dataset.idx;
+      el.querySelector('input').addEventListener('change', (e) => {
+        state[idx].selected = e.target.checked;
+        el.classList.toggle('active', e.target.checked);
+        updateOutputs();
+      });
+      el.querySelector('textarea').addEventListener('input', (e) => {
+        state[idx].body = e.target.value;
+        updateOutputs();
+      });
+    });
+  }
+
+  function buildMarkdown() {
+    const groups = {};
+    for (const c of state) {
+      if (!c.selected) continue;
+      (groups[c.type] ||= []).push(c);
+    }
+    const order = ['feedback', 'project', 'reference', 'user', 'claude-md', 'skill-gap'];
+    const parts = [];
+    for (const type of order) {
+      if (!groups[type]?.length) continue;
+      parts.push(`## ${type}`);
+      for (const c of groups[type]) {
+        parts.push(`### ${c.name}\n\n${c.body.trim()}`);
+      }
+    }
+    return parts.join('\n\n');
+  }
+
+  function buildPrompt(md) {
+    if (!md) return '';
+    return [
+      'Please process the following session-compound output:',
+      '',
+      'For each entry under `## feedback`, `## project`, `## reference`, or `## user` — save it as an individual memory file under the global memory dir (see your CLAUDE.md auto memory section), with a single-line index entry in MEMORY.md. Use the `### <name>` as the memory `name` and frontmatter `description`. Use the `## <type>` as the memory `type`.',
+      '',
+      'For each entry under `## claude-md`, propose the exact insertion or edit to the relevant CLAUDE.md file, then ask me to confirm before writing.',
+      '',
+      'For each entry under `## skill-gap`, summarize the gap and recommend whether to scaffold a new skill via the skill-creator skill.',
+      '',
+      '---',
+      '',
+      md,
+    ].join('\n');
+  }
+
+  function updateOutputs() {
+    const md = buildMarkdown();
+    if (!md) {
+      previewEl.classList.add('empty');
+      previewEl.textContent = 'Select candidates on the left to see the composed markdown here.';
+      promptEl.value = '';
+      return;
+    }
+    previewEl.classList.remove('empty');
+    previewEl.textContent = md;
+    promptEl.value = buildPrompt(md);
+  }
+
+  copyBtn.addEventListener('click', async () => {
+    if (!promptEl.value) return;
+    try {
+      await navigator.clipboard.writeText(promptEl.value);
+      const orig = copyBtn.textContent;
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = orig;
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    } catch {
+      promptEl.select();
+      document.execCommand('copy');
+    }
+  });
+
+  renderCandidates();
+  updateOutputs();
+
+  // ---------- escapeHtml ----------
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+})();
+</script>
+
+</body>
+</html>
