@@ -538,7 +538,7 @@
 </script>
 
 <!-- Agent-authored compound candidates (one array of items). Schema:
-     [{ "name": "...", "type": "feedback|project|reference|user|claude-md|skill-gap",
+     [{ "name": "...", "type": "existing-skill|agent-md|skill-gap",
         "body": "markdown body", "default_selected": true|false }] -->
 <script id="candidates" type="application/json">
 []
@@ -739,7 +739,7 @@
     fbList.innerHTML = fb.map(f => `<div class="turn">
       <div class="idx">!</div>
       <div class="summary">${escapeHtml(f.text)}</div>
-      <div class="tokens">${fmtTime(new Date(f.ts).toISOString())}</div>
+      <div class="tokens">${f.ts ? fmtTime(new Date(f.ts).toISOString()) : '—'}</div>
     </div>`).join('');
   }
 
@@ -901,13 +901,11 @@
     const groups = {};
     for (const c of state) {
       if (!c.selected) continue;
-      // Normalize legacy "claude-md" type to "agent-md" for grouping
-      const t = c.type === 'claude-md' ? 'agent-md' : c.type;
-      (groups[t] ||= []).push(c);
+      (groups[c.type] ||= []).push(c);
     }
-    // Existing-skill first (cheapest action: just install), then memory, then
-    // file edits, then skill-gap (heaviest: build a new skill).
-    const order = ['existing-skill', 'feedback', 'project', 'reference', 'user', 'agent-md', 'skill-gap'];
+    // Existing-skill first (cheapest action: just install), then AGENTS.md
+    // edits, then skill-gap (heaviest: build a new skill).
+    const order = ['existing-skill', 'agent-md', 'skill-gap'];
     const parts = [];
     for (const type of order) {
       if (!groups[type]?.length) continue;
@@ -924,11 +922,9 @@
     return [
       '请处理以下 session-compound 输出。每段对应一个沉淀路径，不要混淆：',
       '',
-      '**`## existing-skill`** — 步骤 4 预查 ecosystem 时找到的可复用 skill。请直接执行每条 body 里附的 `npx -y skills add <owner/repo@skill> -a codex claude-code -y` 命令安装（注意：`npx -y` 在前给 npx 自动升级用；`-a codex claude-code` 同时装到 codex 和 claude-code 两个 agent；末尾 `-y` 跳过 skills CLI 自己的确认）。安装成功后简短确认，无需再 scaffold 新 skill。',
+      '**`## existing-skill`** — 步骤 4 预查 ecosystem 时找到的可复用 skill。请直接执行每条 body 里附的 `npx -y skills add <owner/repo@skill> -a codex claude-code -y` 命令安装（`npx -y` 在前给 npx 自动升级用；`-a codex claude-code` 同时装到 codex 和 claude-code 两个 agent；末尾 `-y` 跳过 skills CLI 自己的确认）。安装成功后简短确认，无需再 scaffold 新 skill。',
       '',
-      '**`## feedback` / `## project` / `## reference` / `## user`** — 全局 memory 条目。按 CLAUDE.md 中 auto memory 规范，每条写入全局 memory 目录的独立文件，并在 MEMORY.md 加一行索引。`### <name>` 作为 memory 文件名和 frontmatter 中的 `name` / `description`；`## <type>` 作为 memory 的 `type`。',
-      '',
-      '**`## agent-md`** — 对 `CLAUDE.md` 或 `AGENTS.md` 的具体修改。注意：用户机器上通常 `~/.codex/AGENTS.md → ~/.claude/CLAUDE.md` 是软链（一份内容双吃）；如果是软链则只需写一处，否则同步两份。指出要改的具体文件 + 精确插入或修改的内容，等我确认后再写。',
+      '**`## agent-md`** — 沉淀到 AGENTS.md 体系。每条 body 第一行已经声明 target（根 `AGENTS.md` / `docs/rules/<topic>.md` + 根 AGENTS.md 索引 / `<subdir>/AGENTS.md`）。按 target 把 body 里"要写入的内容"段逐字落到对应文件；target 是 `docs/rules/<topic>.md` 时同时在根 `AGENTS.md` 加索引行。若两者是软链则只写一处。',
       '',
       '**`## skill-gap`** — 新 skill 候选。每条都已按 5 条 hard gate（多步骤 + 可重复 + 第三人称触发短语 + 可绑定资源 + ecosystem 没现成的）筛过，正文里附了触发短语 / find-skills 检查结果 / imperative 步骤 / bundled resources。请按以下顺序处理：',
       '  1. 调用 `find-skills` skill：用候选里给的关键词跑 `npx skills find` 再确认一次（候选作者的查可能不完整或过时；如果上面 `## existing-skill` 段已经覆盖了相同 query 范围，可跳过）；若发现现成可复用 skill，停在这里——把那个 skill 推荐给我，不要继续造轮子',

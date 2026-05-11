@@ -135,7 +135,7 @@ function newStats() {
     webSearchCount: 0,
     toolSearchCount: 0,
     imageGenerationCount: 0,
-    subagents: [], // {agent_type, message_preview, ts}
+    agentInvocations: [], // {ts, subagent_type, message_preview, fork_context}
   }
 }
 
@@ -143,7 +143,8 @@ function newStats() {
 const FEEDBACK_RE = new RegExp(
   [
     String.raw`\b(no|don'?t|stop|wait|actually|nope|incorrect|wrong|instead|change|redo|revise|rewrite|should|shouldn'?t|remember|forget|nevermind|revert|undo|never\s+mind|hold\s+on)\b`,
-    '不对|不要|别|停|其实|应该|错了|不是|改成|改下|换成|重新|重写|重做|修改',
+    // No bare 别/停 — pattern-matches inside 特别/区别/暂停/不停.
+    '不对|不要|别用|别改|别加|别再|停下|停一下|停止|其实|应该|错了|不是|改成|改下|换成|重新|重写|重做|修改',
     '不用|只要|只需|只能|只用|只做|只看|只关注|只改|只管',
     '记得|别忘|忘了',
     '要不|要么',
@@ -169,12 +170,16 @@ function summarize(text, max = 120) {
 }
 
 // Detect simple file-read commands inside exec_command args (`cat foo`,
-// `head -n 50 bar`, `rg pattern path`, etc.). Best-effort; misses cases where
-// the read is buried inside a pipeline.
+// `head -n 50 bar`, etc.). Best-effort. Matches the read command either at
+// the start of the line OR as the first segment of a pipeline / sequence —
+// `cat foo | grep bar` and `head -n 50 x ; wc -l y` both yield `foo` / `x`.
+// Reads buried later in a pipeline are still missed (rare in practice).
 function extractReadPath(cmd) {
   if (!cmd) return null
   const cmdStr = Array.isArray(cmd) ? cmd.join(' ') : String(cmd)
-  const m = cmdStr.match(/^\s*(?:cat|head|tail|less|nl|wc|file)\s+(?:-\S+\s+)*['"]?(\S+?)['"]?\s*$/)
+  const m = cmdStr.match(
+    /(?:^|[;|&]\s*)\s*(?:cat|head|tail|less|nl|wc|file)\s+(?:-\S+\s+)*['"]?([^\s'"|;>&]+)['"]?/,
+  )
   return m ? m[1] : null
 }
 
@@ -365,12 +370,10 @@ function handleResponseItem(p, ts, stats, currentTurn) {
         const fp = extractReadPath(args.cmd)
         if (fp) stats.fileReads[fp] = (stats.fileReads[fp] || 0) + 1
       }
-      // Sub-agent dispatch (codex has these — earlier note in this file
-      // claiming otherwise was wrong and has been corrected).
       if (name === 'spawn_agent') {
-        stats.subagents.push({
+        stats.agentInvocations.push({
           ts,
-          agent_type: args.agent_type || 'unknown',
+          subagent_type: args.agent_type || 'unknown',
           message_preview: summarize(args.message || '', 120),
           fork_context: args.fork_context ?? null,
         })
@@ -385,12 +388,13 @@ function handleResponseItem(p, ts, stats, currentTurn) {
       // we're tied to looks like a patch.
       const prev = stats.lastCallByCallId[p.call_id]
       const isPatch = prev && /apply.?patch|patch_apply/i.test(prev.name)
-      if (
-        !isPatch &&
-        /Process exited with code [1-9]|Error:|failed\b|patch failed|command not found/i.test(
-          outStr,
-        )
-      ) {
+      // Only line-anchored, strong shell signals. The earlier broad patterns
+      // (`Error:` / `failed\b` anywhere) generated heavy false positives on
+      // legitimate output that happened to mention errors (logs, docs, JSON).
+      // Codex's shell tool emits "Process exited with code N" on non-zero exit
+      // verbatim, which is the authoritative signal.
+      const FAILURE_RE = /^(?:Process exited with code [1-9]|.*: command not found|bash: line \d+:)/m
+      if (!isPatch && FAILURE_RE.test(outStr)) {
         stats.toolFailures.push({
           call_id: p.call_id,
           name: prev?.name || 'unknown',
@@ -507,9 +511,9 @@ function emit(stats, filePath) {
     })
   }
 
-  // Sub-agents counted by agent_type (mirrors claude-code analyzer's shape)
-  const subagentByType = stats.subagents.reduce((acc, a) => {
-    acc[a.agent_type] = (acc[a.agent_type] || 0) + 1
+  // Sub-agents counted by subagent_type (mirrors claude-code analyzer's shape)
+  const subagentByType = stats.agentInvocations.reduce((acc, a) => {
+    acc[a.subagent_type] = (acc[a.subagent_type] || 0) + 1
     return acc
   }, {})
   const subagentList = Object.entries(subagentByType).map(([type, count]) => ({
@@ -590,7 +594,7 @@ function emit(stats, filePath) {
         .filter(([, c]) => c >= 2)
         .map(([file, count]) => ({ file, count })),
       tool_failures: stats.toolFailures,
-      subagents: stats.subagents,
+      agent_invocations: stats.agentInvocations,
     },
   }
 }

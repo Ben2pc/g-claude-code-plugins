@@ -103,16 +103,17 @@ function newStats() {
 }
 
 // Calibrated against ~85 real human messages from 10 sessions (5 claude +
-// 5 codex). The current set lifts recall on common Chinese feedback shapes
-// like 不用 / 要不...吧 / 记得 / 还是...老 / 为什么不. English forms are kept
-// for completeness; this user's transcripts are mostly Chinese, so most
-// recall comes from the Chinese alternation.
+// 5 codex). Single-character Chinese tokens like bare 别 / 停 were dropped:
+// they pattern-match inside common compound words (特别 / 区别 / 类别 / 暂停 /
+// 不停) and cause large false-positive volume. Multi-character feedback
+// markers (停下 / 别用 / 别改) are kept via explicit bigrams or covered by
+// other patterns (不要 / 改成 / 重做).
 const FEEDBACK_RE = new RegExp(
   [
     // English — corrections, redirects, retractions
     String.raw`\b(no|don'?t|stop|wait|actually|nope|incorrect|wrong|instead|change|redo|revise|rewrite|should|shouldn'?t|remember|forget|nevermind|revert|undo|never\s+mind|hold\s+on)\b`,
-    // Chinese — explicit corrections
-    '不对|不要|别|停|其实|应该|错了|不是|改成|改下|换成|重新|重写|重做|修改',
+    // Chinese — explicit corrections (bigram or longer; no bare 别/停)
+    '不对|不要|别用|别改|别加|别再|停下|停一下|停止|其实|应该|错了|不是|改成|改下|换成|重新|重写|重做|修改',
     // Chinese — scope constraints (only-do, don't-need)
     '不用|只要|只需|只能|只用|只做|只看|只关注|只改|只管',
     // Chinese — appended asks / reminders
@@ -311,6 +312,8 @@ function handleAssistant(e, stats, currentTurn) {
       }
       // Cache break detection: a request with large uncached input means the
       // cache was discarded (or we paid to seed a new ephemeral block).
+      // 50K is roughly "more than a typical CLAUDE.md + 1 file"; below that
+      // an uncached input is normal seeding, not a break worth surfacing.
       const totalIn =
         (u.input_tokens || 0) +
         (u.cache_creation_input_tokens || 0) +
@@ -359,6 +362,10 @@ function emit(stats, filePath) {
       })
     }
   }
+  // Cache-hit floor: 85% is what a well-warmed session typically clears;
+  // below 85% usually means system prompt / CLAUDE.md / a large file gets
+  // re-included each turn. The 100K input gate prevents short sessions
+  // (where one cold turn drags the average) from tripping the signal.
   if (cacheHitRate < 0.85 && totalIn > 100_000) {
     wasteSignals.push({
       type: 'low_cache_hit',
