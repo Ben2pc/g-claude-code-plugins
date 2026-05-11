@@ -128,32 +128,86 @@ class 含义：
 
 #### 4d. 填 `<script id="candidates">` 数组（**本 skill 的核心价值**）
 
-把那个 script tag 里的 `[]` 替换为候选条目数组。每个条目是用户可能想保留的一项：memory 条目、CLAUDE.md 增补、或 skill 缺口。
+把那个 script tag 里的 `[]` 替换为候选条目数组。每条候选是用户可能想保留的一项经验，可以沉淀为三个层次：
+
+1. **Memory 条目**（最轻量）— 一行规则 / 偏好 / 事实，写入全局或项目级 memory
+2. **Agent 配置文件增补**（中等）— 写入 `CLAUDE.md` 或 `AGENTS.md`（**两者通常是软链一份内容**：用户机器上 `~/.codex/AGENTS.md → ~/.claude/CLAUDE.md`，项目级一般也建软链）
+3. **新 skill**（最重量）— 把可重复多步骤流程抽象成一个 skill 包
 
 Schema：
 ```json
 [
   {
     "name": "kebab-case-name",
-    "type": "feedback | project | reference | user | claude-md | skill-gap",
+    "type": "feedback | project | reference | user | agent-md | skill-gap",
     "body": "条目正文 markdown——直接落库的文本",
     "default_selected": true
   }
 ]
 ```
 
-type 语义（遵循全局 auto-memory 规范）：
+##### type 语义（遵循全局 auto-memory 规范）
 
 - **`feedback`** — 用户对你给的纠正 / 偏好。正文结构：先写规则，再写 `**Why:**` 和 `**How to apply:**` 两行
 - **`project`** — 关于在做的项目的事实（截止日期、相关人、决策）。正文同 feedback 结构
 - **`reference`** — 外部系统的指针（Linear 项目、Grafana 看板、Slack 频道）
 - **`user`** — 关于用户本人的角色 / 专长 / 偏好
-- **`claude-md`** — 对某个 `CLAUDE.md` 的具体修改。正文：哪个文件 + 准确插入或修改的内容
-- **`skill-gap`** — 这次会话里出现了重复模式，可以抽象成新 skill。正文：描述这个缺口 + 一个 skill 应该做什么
+- **`agent-md`** — 对 `CLAUDE.md` 或 `AGENTS.md` 的具体修改。正文：哪个文件 + 准确插入或修改的内容。**如果两者是软链则只需写一处；否则同步两份**
+- **`skill-gap`** — 这次会话里出现了**多步骤可重复模式**，值得抽象成一个 skill。正文必含：触发词 / 场景、3–5 步流程草稿、需要的脚本或资源、验证方式
 
-**原材料**来自 JSON 的 `raw_for_compound`：feedback 瞬间、重复读文件、子 agent 调用、turn 时间线。`feedback` 类条目用 `narrative.feedback_moments` 里的原话当起点。`project` 类条目从 `human_turns` 提炼。
+##### 决策表：memory vs agent-md vs skill
 
-**质量标准**：宁少勿滥。**3–8 条高价值候选** 胜过 20 条平庸候选。明显的别写——只保留**未来某次会话**会真正用到的。
+参考 `skill-creator` / `skill-development` 的判断标准：
+
+| 经验形态 | 沉淀路径 |
+|---|---|
+| 单一规则 / 偏好（"不要 X / 总是 Y"） | `feedback` memory |
+| 项目事实 / 状态（"deadline 是 ...", "owner 是 ..."） | `project` memory |
+| 外部资源指针（"日志在 ...", "看板是 ..."） | `reference` memory |
+| 用户角色 / 知识背景 | `user` memory |
+| 影响一整类未来会话的工作流约束 / 流程规则 | `agent-md`（CLAUDE.md / AGENTS.md） |
+| **多步骤、可重复、有明确触发条件、需要脚本或资源辅助** | `skill-gap`（新 skill） |
+| 一次性 / 上游工具的 issue / 不在用户控制范围内 | **不要写候选**（不是沉淀对象） |
+
+##### `skill-gap` 候选必须自证「值得做成 skill」
+
+只有同时满足以下条件才写 `skill-gap`：
+
+1. **多步骤**：能拆成 ≥3 步，且步骤之间有顺序 / 依赖
+2. **可重复**：在未来会话里**很可能再次发生**（一次性的写 memory 即可）
+3. **明确触发**：能在 `description` 里写出「当用户说 X / 处于 Y 场景时使用」
+4. **可绑定资源**：需要某个脚本 / 模板 / 参考文档来执行（纯文字规则用 memory 更轻）
+
+反例（这些写 memory 而不是 skill）：
+- "用户偏好先写 spec 再实现" → 单一规则 → `feedback`
+- "项目用 vue 不用 react" → 单一事实 → `project`
+- "提醒别用 git reset --hard" → 单一规则 → `feedback`
+
+正例（这些可以做 skill）：
+- "e2e 验证前先检查 dev server / 数据库 / 依赖状态机" → 多步骤检查清单 + 可绑定脚本 → `skill-gap`
+- "添加新题型组件时：先建 `*Question.tsx`，再加单测，再注册到 router，再写 mobile preview" → 4 步固定流程 → `skill-gap`
+
+`skill-gap` 正文模板：
+```markdown
+**触发**：用户说 X / 处于 Y 场景
+
+**3–5 步流程**：
+1. ...
+2. ...
+3. ...
+
+**需要的资源**：scripts/foo.py（功能）/ references/bar.md（内容）
+
+**验证**：如何确认 skill 跑成功了
+```
+
+##### 原材料
+
+来自 JSON 的 `raw_for_compound`：feedback 瞬间、重复读文件、子 agent 调用、turn 时间线。`feedback` 类条目用 `narrative.feedback_moments` 里的原话当起点。`project` 类条目从 `human_turns` 提炼。
+
+##### 质量标准
+
+宁少勿滥。**3–8 条高价值候选** 胜过 20 条平庸候选。明显的别写——只保留**未来某次会话**会真正用到的。`skill-gap` 的标准最高，一次产出 0–2 条就够了。
 
 ### 步骤 5：报告输出路径
 

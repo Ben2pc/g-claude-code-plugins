@@ -191,7 +191,12 @@
   .candidate .type.project  { color: var(--info); border-color: #2a3d5a; }
   .candidate .type.reference { color: #b48aff; border-color: #3d2a5a; }
   .candidate .type.user     { color: var(--good); border-color: #2a5a3d; }
-  .candidate .type.skill-gap, .candidate .type.claude-md {
+  /* agent-md = edit to CLAUDE.md / AGENTS.md (usually a symlink) */
+  .candidate .type.agent-md, .candidate .type.claude-md {
+    color: #ffb3a7; border-color: #5a3a32;
+  }
+  /* skill-gap = new skill candidate (heaviest sink) */
+  .candidate .type.skill-gap {
     color: #ef9fef; border-color: #5a2a5a;
   }
   .candidate textarea {
@@ -587,9 +592,11 @@
     const groups = {};
     for (const c of state) {
       if (!c.selected) continue;
-      (groups[c.type] ||= []).push(c);
+      // Normalize legacy "claude-md" type to "agent-md" for grouping
+      const t = c.type === 'claude-md' ? 'agent-md' : c.type;
+      (groups[t] ||= []).push(c);
     }
-    const order = ['feedback', 'project', 'reference', 'user', 'claude-md', 'skill-gap'];
+    const order = ['feedback', 'project', 'reference', 'user', 'agent-md', 'skill-gap'];
     const parts = [];
     for (const type of order) {
       if (!groups[type]?.length) continue;
@@ -604,13 +611,16 @@
   function buildPrompt(md) {
     if (!md) return '';
     return [
-      '请处理以下 session-compound 输出：',
+      '请处理以下 session-compound 输出。每段对应一个沉淀路径，不要混淆：',
       '',
-      '`## feedback` / `## project` / `## reference` / `## user` 段下的每个条目——按 CLAUDE.md 中 auto memory 规范，写入全局 memory 目录，一文件一条，并在 MEMORY.md 增加一行索引。用 `### <name>` 作为 memory 的 `name` 和 frontmatter `description`，用 `## <type>` 作为 memory 的 `type`。',
+      '**`## feedback` / `## project` / `## reference` / `## user`** — 全局 memory 条目。按 CLAUDE.md 中 auto memory 规范，每条写入全局 memory 目录的独立文件，并在 MEMORY.md 加一行索引。`### <name>` 作为 memory 文件名和 frontmatter 中的 `name` / `description`；`## <type>` 作为 memory 的 `type`。',
       '',
-      '`## claude-md` 段下的每个条目——指出要改的 CLAUDE.md 文件 + 精确的插入或修改内容，等我确认后再写入。',
+      '**`## agent-md`** — 对 `CLAUDE.md` 或 `AGENTS.md` 的具体修改。注意：用户机器上通常 `~/.codex/AGENTS.md → ~/.claude/CLAUDE.md` 是软链（一份内容双吃）；如果是软链则只需写一处，否则同步两份。指出要改的具体文件 + 精确插入或修改的内容，等我确认后再写。',
       '',
-      '`## skill-gap` 段下的每个条目——总结这个缺口，建议是否通过 skill-creator skill 创建新 skill。',
+      '**`## skill-gap`** — 新 skill 候选。每条都已经按「多步骤 + 可重复 + 明确触发 + 可绑定资源」的标准筛过。请按以下顺序处理：',
+      '  1. 用 `find-skills` 检查是否已有现成 skill 能复用',
+      '  2. 如果没有，调用 `skill-creator` skill 来 scaffold 新 skill（不是直接写 SKILL.md——skill-creator 会带你过完整的 capture-intent / interview / draft / eval 流程）',
+      '  3. 在我确认 scope 之前不要落盘',
       '',
       '---',
       '',
