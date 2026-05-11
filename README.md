@@ -69,6 +69,7 @@ Skills that live outside plugins, under `skills/` at the repo root:
 | [deep-review](./skills/deep-review) | Multi-dimensional PR review orchestrator (required + conditional reviewers + punch list) |
 | [test-designer](./skills/test-designer) | Independent-Evaluation test designer for TDD red phase |
 | [parallel-implementation](./skills/parallel-implementation) | Slice planner for parallel multi-subagent code writing |
+| [session-compound](./skills/session-compound) | Compound the current CLI session (Claude Code or Codex) into an interactive HTML report — narrative + token / cache / tool diagnostics + a playground for ticking candidate memory / CLAUDE.md / skill-gap entries to copy back as a prompt |
 
 ```bash
 npx skills add Ben2pc/g-claude-code-plugins --skill claude-code-agent
@@ -77,6 +78,7 @@ npx skills add Ben2pc/g-claude-code-plugins --skill ip-diagnosis
 npx skills add Ben2pc/g-claude-code-plugins --skill deep-review
 npx skills add Ben2pc/g-claude-code-plugins --skill test-designer
 npx skills add Ben2pc/g-claude-code-plugins --skill parallel-implementation
+npx skills add Ben2pc/g-claude-code-plugins --skill session-compound
 ```
 
 ### Feishu / Lark Skills
