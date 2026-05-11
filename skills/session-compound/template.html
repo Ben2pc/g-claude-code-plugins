@@ -191,6 +191,10 @@
   .candidate .type.project  { color: var(--info); border-color: #2a3d5a; }
   .candidate .type.reference { color: #b48aff; border-color: #3d2a5a; }
   .candidate .type.user     { color: var(--good); border-color: #2a5a3d; }
+  /* existing-skill = recommend-install from ecosystem (npx skills add) */
+  .candidate .type.existing-skill {
+    color: #7adfa0; border-color: #2f5d40; background: rgba(122, 223, 160, 0.08);
+  }
   /* agent-md = edit to CLAUDE.md / AGENTS.md (usually a symlink) */
   .candidate .type.agent-md, .candidate .type.claude-md {
     color: #ffb3a7; border-color: #5a3a32;
@@ -199,6 +203,10 @@
   .candidate .type.skill-gap {
     color: #ef9fef; border-color: #5a2a5a;
   }
+  /* Visual grouping: existing-skill cards float to the top with a stronger
+     left rail so users see "install this instead" before scrolling to
+     skill-gap / memory candidates */
+  .candidate.is-existing-skill { border-left: 3px solid var(--good); }
   .candidate textarea {
     margin-top: 8px;
     width: 100%;
@@ -556,13 +564,25 @@
     body: c.body || '',
   }));
 
+  // Visually surface ecosystem recommendations (existing-skill) at the top
+  // of the candidate list — they're cheaper to act on than building a new
+  // skill, so users should see them first. Stable sort otherwise.
+  const TYPE_ORDER = ['existing-skill', 'feedback', 'project', 'reference', 'user', 'agent-md', 'claude-md', 'skill-gap'];
+  const orderIdx = (t) => {
+    const i = TYPE_ORDER.indexOf(t);
+    return i === -1 ? TYPE_ORDER.length : i;
+  };
+  state.sort((a, b) => orderIdx(a.type) - orderIdx(b.type));
+
   function renderCandidates() {
     if (!state.length) {
       candidatesList.innerHTML = '<div class="empty-hint">未产出候选条目。Agent 需要填 <code>&lt;script id="candidates"&gt;</code>。</div>';
       return;
     }
-    candidatesList.innerHTML = state.map((c, i) => `
-      <div class="candidate ${c.selected ? 'active' : ''}" data-idx="${i}">
+    candidatesList.innerHTML = state.map((c, i) => {
+      const isExisting = c.type === 'existing-skill';
+      return `
+      <div class="candidate ${c.selected ? 'active' : ''} ${isExisting ? 'is-existing-skill' : ''}" data-idx="${i}">
         <div class="head">
           <label>
             <input type="checkbox" ${c.selected ? 'checked' : ''} />
@@ -572,7 +592,8 @@
         </div>
         <textarea>${escapeHtml(c.body)}</textarea>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     candidatesList.querySelectorAll('.candidate').forEach(el => {
       const idx = +el.dataset.idx;
@@ -596,7 +617,9 @@
       const t = c.type === 'claude-md' ? 'agent-md' : c.type;
       (groups[t] ||= []).push(c);
     }
-    const order = ['feedback', 'project', 'reference', 'user', 'agent-md', 'skill-gap'];
+    // Existing-skill first (cheapest action: just install), then memory, then
+    // file edits, then skill-gap (heaviest: build a new skill).
+    const order = ['existing-skill', 'feedback', 'project', 'reference', 'user', 'agent-md', 'skill-gap'];
     const parts = [];
     for (const type of order) {
       if (!groups[type]?.length) continue;
@@ -613,12 +636,14 @@
     return [
       '请处理以下 session-compound 输出。每段对应一个沉淀路径，不要混淆：',
       '',
+      '**`## existing-skill`** — 步骤 4 预查 ecosystem 时找到的可复用 skill。请直接执行每条 body 里附的 `npx skills add <owner/repo@skill> -g -y` 命令安装；安装成功后简短确认，无需再 scaffold 新 skill（这一段就是为了**避免**造重复轮子）。',
+      '',
       '**`## feedback` / `## project` / `## reference` / `## user`** — 全局 memory 条目。按 CLAUDE.md 中 auto memory 规范，每条写入全局 memory 目录的独立文件，并在 MEMORY.md 加一行索引。`### <name>` 作为 memory 文件名和 frontmatter 中的 `name` / `description`；`## <type>` 作为 memory 的 `type`。',
       '',
       '**`## agent-md`** — 对 `CLAUDE.md` 或 `AGENTS.md` 的具体修改。注意：用户机器上通常 `~/.codex/AGENTS.md → ~/.claude/CLAUDE.md` 是软链（一份内容双吃）；如果是软链则只需写一处，否则同步两份。指出要改的具体文件 + 精确插入或修改的内容，等我确认后再写。',
       '',
       '**`## skill-gap`** — 新 skill 候选。每条都已按 5 条 hard gate（多步骤 + 可重复 + 第三人称触发短语 + 可绑定资源 + ecosystem 没现成的）筛过，正文里附了触发短语 / find-skills 检查结果 / imperative 步骤 / bundled resources。请按以下顺序处理：',
-      '  1. 调用 `find-skills` skill：用候选里给的关键词跑 `npx skills find` 再确认一次（候选作者的查可能不完整或过时）；若发现现成可复用 skill，停在这里——把那个 skill 推荐给我，不要继续造轮子',
+      '  1. 调用 `find-skills` skill：用候选里给的关键词跑 `npx skills find` 再确认一次（候选作者的查可能不完整或过时；如果上面 `## existing-skill` 段已经覆盖了相同 query 范围，可跳过）；若发现现成可复用 skill，停在这里——把那个 skill 推荐给我，不要继续造轮子',
       '  2. 如果确认无现成可复用，调用 `skill-creator` skill 来 scaffold 新 skill。**不要直接现场写 SKILL.md**——skill-creator 会带你过完整的 capture-intent / interview / draft / test-prompts / eval 流程，并确保 description 用第三人称具体触发短语、body 用 imperative 风格、SKILL.md ≤2k 词且把细节拆到 references/（这些是 skill-development 文档的硬规范）',
       '  3. 在我确认 scope 之前不要落盘',
       '',

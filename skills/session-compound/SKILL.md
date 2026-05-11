@@ -74,11 +74,28 @@ node <skill-dir>/analyzers/codex.mjs > /tmp/session-compound.json
 cp <skill-dir>/template.html ./session-compound-$(date +%Y%m%d-%H%M).html
 ```
 
-### 步骤 4：注入数据 + 撰写 Agent 填空段（**用 Edit，不用 Write**——必须保留模板的 JS/CSS）
+### 步骤 4：基于数据预查 ecosystem skill
+
+在写 candidates 之前，**先**从本次 session 数据里识别 3–5 个可能的 skill 缺口模式（重复读同一份文档、反复出现的工具组合 + 失败、长 turn 里出现的固定多步流程关键词），为每个模式生成一个搜索 query，然后跑：
+
+```sh
+npx skills find "<query>" 2>&1 | head -30
+```
+
+每个 query 抽 top-3 结果（name / install_count / source URL）。
+
+依据返回结果做出 verdict：
+- **`recommend-install`** — 找到一个或多个高 install 的现成 skill，复用即可（不用再写 `skill-gap` candidate）
+- **`partial-match`** — 有相关 skill 但语义不完全匹配（在 `skill-gap` candidate 的 find-skills 检查字段里引用这些结果，避免下游 agent 重跑）
+- **`no-match`** — 完全没有可复用的，写 `skill-gap` candidate 自创
+
+这一步的输出**直接进入下一步 5d 的 candidates 数组**，但需要一个特殊 type `existing-skill`——任何 `recommend-install` verdict 的结果都应该作为一个 `existing-skill` candidate 加进数组（用户在浏览器里勾选 → 复制 prompt 后下游 agent 会自动跑 `npx skills add` 安装）。
+
+### 步骤 5：注入数据 + 撰写 Agent 填空段（**用 Edit，不用 Write**——必须保留模板的 JS/CSS）
 
 需要做 4 处编辑：
 
-#### 4a. 替换 `<script id="report-data">` 的内容
+#### 5a. 替换 `<script id="report-data">` 的内容
 
 把这块的内容替换成步骤 1 产出的完整 JSON：
 
@@ -90,7 +107,7 @@ cp <skill-dir>/template.html ./session-compound-$(date +%Y%m%d-%H%M).html
 
 模板的 JS 会自动从这个 JSON 渲染 hero、所有表格、bar、时间线。
 
-#### 4b. 填 `<!-- AGENT: narrative-summary -->` 块
+#### 5b. 填 `<!-- AGENT: narrative-summary -->` 块
 
 把这个 div：
 ```html
@@ -103,7 +120,7 @@ cp <skill-dir>/template.html ./session-compound-$(date +%Y%m%d-%H%M).html
 
 摘要要求：**事实性**。引用真实的 turn 内容、真实的决策、真实的工具模式——不要套话。
 
-#### 4c. 填 `<!-- AGENT: anomalies -->` 块
+#### 5c. 填 `<!-- AGENT: anomalies -->` 块
 
 把 `<div class="takes" id="anomalies">...</div>` 内的占位 hint 替换为 **3–5 张 take 卡片**。数值尽量用「占总 token 的 %」表达。精确 markup：
 
@@ -126,7 +143,7 @@ class 含义：
 - 子 agent 调用没有输出格式约束
 - Context window 接近上限（Codex）
 
-#### 4d. 填 `<script id="candidates">` 数组（**本 skill 的核心价值**）
+#### 5d. 填 `<script id="candidates">` 数组（**本 skill 的核心价值**）
 
 把那个 script tag 里的 `[]` 替换为候选条目数组。每条候选是用户可能想保留的一项经验，可以沉淀为三个层次：
 
@@ -139,8 +156,8 @@ Schema：
 [
   {
     "name": "kebab-case-name",
-    "type": "feedback | project | reference | user | agent-md | skill-gap",
-    "body": "条目正文 markdown——直接落库的文本",
+    "type": "existing-skill | feedback | project | reference | user | agent-md | skill-gap",
+    "body": "条目正文 markdown——直接落库的文本（或对 existing-skill 来说，含安装命令）",
     "default_selected": true
   }
 ]
@@ -148,12 +165,19 @@ Schema：
 
 ##### type 语义（遵循全局 auto-memory 规范）
 
+- **`existing-skill`** — 步骤 4 预查时找到的现成 ecosystem skill，verdict 为 `recommend-install`。正文模板：
+  ```
+  **来源**: <owner/repo@skill> · <NK installs> · <skills.sh URL>
+  **解决的本会话问题**: <为什么这个 skill 适合本会话出现的某个模式>
+  **安装命令**: `npx skills add <owner/repo@skill> -g -y`
+  ```
+  勾选后会进入合成的 prompt，下游 agent 会自动执行 `npx skills add` 安装
 - **`feedback`** — 用户对你给的纠正 / 偏好。正文结构：先写规则，再写 `**Why:**` 和 `**How to apply:**` 两行
 - **`project`** — 关于在做的项目的事实（截止日期、相关人、决策）。正文同 feedback 结构
 - **`reference`** — 外部系统的指针（Linear 项目、Grafana 看板、Slack 频道）
 - **`user`** — 关于用户本人的角色 / 专长 / 偏好
 - **`agent-md`** — 对 `CLAUDE.md` 或 `AGENTS.md` 的具体修改。正文：哪个文件 + 准确插入或修改的内容。**如果两者是软链则只需写一处；否则同步两份**
-- **`skill-gap`** — 这次会话里出现了**多步骤可重复模式**，值得抽象成一个 skill。正文必含：触发词 / 场景、3–5 步流程草稿、需要的脚本或资源、验证方式
+- **`skill-gap`** — 这次会话里出现了**多步骤可重复模式**，值得抽象成一个新 skill。正文必含：触发短语 / find-skills 检查结果 / imperative 3–5 步流程 / bundled resources / 验证方式（见下方模板）
 
 ##### 决策表：memory vs agent-md vs skill
 
@@ -223,7 +247,7 @@ Schema：
 
 宁少勿滥。**3–8 条高价值候选** 胜过 20 条平庸候选。明显的别写——只保留**未来某次会话**会真正用到的。`skill-gap` 的标准最高，一次产出 0–2 条就够了。
 
-### 步骤 5：报告输出路径
+### 步骤 6：报告输出路径
 
 把保存的绝对路径报告给用户。**不要**打开它、**不要**预渲染。用户自己打开、在 Compound tab 勾选、行内编辑措辞、点 Copy，把生成的提示词粘回 Claude / Codex 那一句话就完成落库。
 
