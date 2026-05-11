@@ -171,12 +171,13 @@ Schema：
 
 ##### `skill-gap` 候选必须自证「值得做成 skill」
 
-只有同时满足以下条件才写 `skill-gap`：
+参考 `skill-development` skill 的判断框架，只有同时满足以下 5 条 hard gate 才写 `skill-gap`：
 
-1. **多步骤**：能拆成 ≥3 步，且步骤之间有顺序 / 依赖
-2. **可重复**：在未来会话里**很可能再次发生**（一次性的写 memory 即可）
-3. **明确触发**：能在 `description` 里写出「当用户说 X / 处于 Y 场景时使用」
-4. **可绑定资源**：需要某个脚本 / 模板 / 参考文档来执行（纯文字规则用 memory 更轻）
+1. **多步骤**：能拆成 ≥3 步、步骤间有顺序 / 依赖
+2. **可重复**：未来会话很可能再次发生（一次性的写 memory 即可）
+3. **能写出第三人称 + 具体触发短语**——这是 skill description 的硬规范，也是隐式 sanity check：写不出「This skill should be used when the user asks to "X", "Y"」就说明触发场景不清晰，不值得做 skill
+4. **可绑定资源**：需要 `scripts/`（deterministic 脚本）/ `references/`（按需加载的文档）/ `assets/`（输出模板）。纯文字规则用 memory 更轻
+5. **ecosystem 里没有现成 skill 能复用**——产出候选前用 `npx skills find <query>` 查过（这是 `find-skills` skill 的核心动作）
 
 反例（这些写 memory 而不是 skill）：
 - "用户偏好先写 spec 再实现" → 单一规则 → `feedback`
@@ -187,19 +188,32 @@ Schema：
 - "e2e 验证前先检查 dev server / 数据库 / 依赖状态机" → 多步骤检查清单 + 可绑定脚本 → `skill-gap`
 - "添加新题型组件时：先建 `*Question.tsx`，再加单测，再注册到 router，再写 mobile preview" → 4 步固定流程 → `skill-gap`
 
-`skill-gap` 正文模板：
+`skill-gap` 正文模板（agent 撰写候选时按此填，覆盖全部 5 条 hard gate）：
+
 ```markdown
-**触发**：用户说 X / 处于 Y 场景
+**触发短语**（第三人称 + 具体短语，自证 gate #3）：
+> This skill should be used when the user asks to "<具体短语 1>", "<具体短语 2>", or mentions <场景>.
 
-**3–5 步流程**：
-1. ...
-2. ...
-3. ...
+**find-skills 检查**（自证 gate #5，用 `npx skills find <query>`）：
+- 已搜：<keyword>
+- 结果：无现成可复用 / 找到 `<owner/repo@skill>` 但 <理由不合适>
 
-**需要的资源**：scripts/foo.py（功能）/ references/bar.md（内容）
+**3–5 步流程**（imperative，verb-first；遵循 skill-development 写作规范）：
+1. Verb …
+2. Verb …
+3. Verb …
 
-**验证**：如何确认 skill 跑成功了
+**Bundled resources**（自证 gate #4）：
+- `scripts/<name>.sh` — 做 <X>
+- `references/<name>.md` — 提供 <Y> 的细节
+- `assets/<name>/` — <Z> 模板（可选）
+
+**验证**：跑 `<command>` 应该看到 <expected>；失败时检查 <fallback>。
+
+**为什么不是 memory**：本条满足 5 条 hard gate（多步骤 + 可重复 + 触发清晰 + 资源可绑定 + ecosystem 没现成的）；写成 feedback memory 无法承载脚本和多步骤逻辑。
 ```
+
+下游 agent 拿到这种 `skill-gap` 候选后，应走 `skill-creator` 的完整流程（capture-intent → interview → draft → eval → iterate），**不要直接现场写 SKILL.md**——`skill-creator` 会确保 description 触发率、imperative 风格、progressive disclosure（SKILL.md ≤2k 词，详情拆 references/）这些 skill-development 规范都被遵守。
 
 ##### 原材料
 
@@ -217,6 +231,9 @@ Schema：
 
 ## 备注
 
+- 写 `skill-gap` / `agent-md` 类候选前，强烈建议先翻一下两个上游 skill：
+  - `find-skills` SKILL.md — 教如何用 `npx skills find` 在 ecosystem 里搜可复用 skill（候选 gate #5）
+  - `skill-development` SKILL.md（位于 claude-plugins-official/plugin-dev/skills/skill-development/）— 完整的 skill 写作规范：第三人称 description、imperative body、progressive disclosure（SKILL.md ≤2k 词 + references/ + scripts/ + assets/）、validation checklist。`skill-gap` body 模板的每个字段都对应那里的某条规范
 - 模板 JS 只读两个 script block：`<script id="report-data">`（analyzer 输出）和 `<script id="candidates">`（你撰写的候选）。其余渲染都靠这两个 blob 驱动。**不要改 HTML 结构**。
 - Compound tab 是这个 skill 区别于普通 session report 的核心价值——把「AI 提取候选 → 人审核 → 落入 memory」做成了无摩擦闭环。
 - Codex 有原生 sub-agent（`spawn_agent` / `wait_agent` / `close_agent` 工具调用），analyzer 会把 `agent_type` 汇总到 `health.subagents`。Codex 没有 skill 概念，模板会隐藏对应表格。
