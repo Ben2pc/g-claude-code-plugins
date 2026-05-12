@@ -56,7 +56,6 @@ npx skills add Ben2pc/g-claude-code-plugins --list
 | [example-plugin](./plugins/example-plugin) | An example plugin with skill, agent, and hook | 1.0.0 |
 | [feishu-channel](./plugins/feishu-channel) | Connect Claude Code to Feishu via WebSocket — chat, access control, pairing auth | 0.2.0 |
 | [claude-remote](./plugins/claude-remote) | Manage Claude Code remote-control sessions in Terminal.app | 0.1.0 |
-| [deep-review](./plugins/deep-review) | Multi-dimensional PR review orchestrator (11 built-in reviewers + project-level custom reviewers via `docs/rules/review/`) | 0.3.0 |
 
 ### Standalone Skills
 
