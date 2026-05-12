@@ -57,6 +57,11 @@ npx skills add Ben2pc/g-claude-code-plugins --list
 | [feishu-channel](./plugins/feishu-channel) | Connect Claude Code to Feishu via WebSocket — chat, access control, pairing auth | 0.2.0 |
 | [claude-remote](./plugins/claude-remote) | Manage Claude Code remote-control sessions in Terminal.app | 0.1.0 |
 
+> **Migrated**: `deep-review` (multi-dimensional PR review orchestrator) now lives at [Ben2pc/auriga-cli](https://github.com/Ben2pc/auriga-cli). Install it from there:
+> ```bash
+> /plugin install deep-review@auriga-cli
+> ```
+
 ### Standalone Skills
 
 Skills that live outside plugins, under `skills/` at the repo root:
